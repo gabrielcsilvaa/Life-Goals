@@ -1,0 +1,93 @@
+name: Release
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+jobs:
+  backend:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.id == github.repository_id
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    permissions: {contents: read, packages: write}
+    outputs:
+      commit: ${{ steps.target.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {ref: '${{ github.event.workflow_run.head_sha }}', persist-credentials: false}
+      - name: Verify immutable target and configured host
+        id: target
+        env:
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+          HOST: ${{ vars.BACKEND_SSH_HOST }}
+          USER: ${{ vars.BACKEND_SSH_USER }}
+          BACKEND_ORIGIN: ${{ vars.BACKEND_ORIGIN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -n "$HOST" && test -n "$USER" && test -n "$BACKEND_ORIGIN" || { echo 'Backend hosting is not configured. No deployment performed.'; exit 1; }
+          test "$(git rev-parse HEAD)" = "$COMMIT"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$COMMIT" || { echo 'Release superseded by a newer main commit.'; exit 1; }
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+      - name: Build versioned backend image
+        env: {COMMIT: '${{ github.event.workflow_run.head_sha }}'}
+        run: docker build --tag "ghcr.io/${GITHUB_REPOSITORY,,}/backend:$COMMIT" .
+      - name: Publish image
+        env: {GHCR_TOKEN: '${{ secrets.GITHUB_TOKEN }}', COMMIT: '${{ github.event.workflow_run.head_sha }}'}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}/backend:$COMMIT"
+      - name: Deploy backend with backup, migration gate and health validation
+        env:
+          SSH_KEY: ${{ secrets.BACKEND_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.BACKEND_SSH_KNOWN_HOSTS }}
+          HOST: ${{ vars.BACKEND_SSH_HOST }}
+          USER: ${{ vars.BACKEND_SSH_USER }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS"
+          umask 077
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/deploy-key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known-hosts"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/known-hosts" -i "$RUNNER_TEMP/deploy-key" "$USER@$HOST" bash -s -- "ghcr.io/${GITHUB_REPOSITORY,,}/backend:$COMMIT" "$COMMIT" < scripts/deploy_backend.sh
+      - name: Verify public backend release
+        env: {BACKEND_ORIGIN: '${{ vars.BACKEND_ORIGIN }}', COMMIT: '${{ github.event.workflow_run.head_sha }}'}
+        run: curl --fail --silent --max-time 30 "$BACKEND_ORIGIN/ready/" | python3 -c 'import json,sys; assert json.load(sys.stdin)["version"] == sys.argv[1]' "$COMMIT"
+  web:
+    needs: backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {ref: '${{ needs.backend.outputs.commit }}', persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24', cache: npm, cache-dependency-path: mobile/package-lock.json}
+      - run: npm ci
+        working-directory: mobile
+      - run: npm run build:pwa && npm run check:pwa
+        working-directory: mobile
+        env:
+          BACKEND_ORIGIN: ${{ vars.BACKEND_ORIGIN }}
+          EXPO_PUBLIC_DEMO_ONLY: 'false'
+          APP_COMMIT: ${{ needs.backend.outputs.commit }}
+      - name: Stage and verify before promotion
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          COMMIT: ${{ needs.backend.outputs.commit }}
+          FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN }}
+        run: |
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID" && test -n "$FRONTEND_ORIGIN"
+          node -e 'require("fs").writeFileSync(".vercel/project.json",JSON.stringify({orgId:process.env.VERCEL_ORG_ID,projectId:process.env.VERCEL_PROJECT_ID}))'
+          npx --yes vercel@67.0.0 project inspect --non-interactive
+          URL=$(npx --yes vercel@67.0.0 deploy --prebuilt --prod --skip-domain --yes)
+          npx --yes vercel@67.0.0 curl /version.json --deployment "$URL" -- --fail --silent | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["commit"] == sys.argv[1] and data["demoOnly"] is False' "$COMMIT"
+          npx --yes vercel@67.0.0 promote "$URL" --yes
+          curl --fail --silent --max-time 30 "$FRONTEND_ORIGIN/version.json" | python3 -c 'import json,sys; assert json.load(sys.stdin)["commit"] == sys.argv[1]' "$COMMIT"

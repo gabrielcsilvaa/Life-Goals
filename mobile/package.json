@@ -43,7 +43,9 @@
     "lint": "expo lint",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web",
+    "build:pwa": "node scripts/build-pwa.mjs",
+    "check:pwa": "node scripts/check-pwa.mjs"
   },
   "private": true,
   "overrides": {

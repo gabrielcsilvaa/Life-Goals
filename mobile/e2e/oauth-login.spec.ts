@@ -41,7 +41,7 @@ test("OAuth browser login and consent submit with CSRF intact", async ({
     state: "csrf-browser-regression",
   });
   await page.goto(base + "/oauth/authorize/?" + query);
-  await page.getByLabel("Usuário", { exact: true }).fill("oauth-browser-user");
+  await page.getByLabel("E-mail ou usuário", { exact: true }).fill("oauth-browser-user");
   await page
     .getByLabel("Senha", { exact: true })
     .fill("Browser-OAuth-test-96!");

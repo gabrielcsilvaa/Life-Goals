@@ -13,6 +13,7 @@ import { Frame } from "../components/Frame";
 import { CommandSheet } from "../components/CommandSheet";
 import { AppProvider } from "../state/AppProvider";
 import { GoalArtProvider } from "../design/goalArt";
+import { PwaStatus } from "../components/PwaStatus";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Feather from "@expo/vector-icons/Feather";
 
@@ -52,6 +53,7 @@ function StartupShell() {
   return (
     <>
       <StatusBar style="dark" />
+      <PwaStatus />
       <Frame>
         <View style={{ flex: 1 }}>
           <Slot />

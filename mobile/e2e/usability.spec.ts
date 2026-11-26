@@ -202,7 +202,7 @@ test("live API: first use with personal account, real income, travel plan and ex
   await page
     .getByLabel("E-mail", { exact: true })
     .fill(`${username}@example.com`);
-  await page.getByLabel("Usuário", { exact: true }).fill(username);
+
   await page.getByLabel("Senha", { exact: true }).fill(password);
   await page
     .getByRole("button", { name: "Criar minha conta", exact: true })

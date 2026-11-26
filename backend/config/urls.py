@@ -7,17 +7,39 @@ from oauth2_provider.views import (
     RevokeTokenView,
     TokenView,
 )
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from finance.views import CommandView, SchemaView, SnapshotView, TransactionListView, health
+from finance.views import CommandView, SchemaView, SnapshotView, TransactionListView, health, ready
+from identity.tokens import EmailTokenView
 from identity.views import LogoutView, RegisterView
+from identity.web import (
+    BindEmailView,
+    CsrfView,
+    RecoveryView,
+    ResetView,
+    SessionView,
+    VerifyView,
+    WebLoginView,
+    WebLogoutView,
+    WebRegisterView,
+)
 from integrations.oauth import PublicRegistrationView
 from integrations.views import ConnectionsView, RevokeConnectionView
 
 urlpatterns = [
     path("health/", health),
+    path("ready/", ready),
     path("api/v1/auth/register/", RegisterView.as_view()),
-    path("api/v1/auth/token/", TokenObtainPairView.as_view()),
+    path("api/v1/auth/token/", EmailTokenView.as_view()),
+    path("api/v1/web/csrf/", CsrfView.as_view()),
+    path("api/v1/web/session/", SessionView.as_view()),
+    path("api/v1/web/register/", WebRegisterView.as_view()),
+    path("api/v1/web/login/", WebLoginView.as_view()),
+    path("api/v1/web/logout/", WebLogoutView.as_view()),
+    path("api/v1/web/recover/", RecoveryView.as_view()),
+    path("api/v1/web/reset/", ResetView.as_view()),
+    path("api/v1/web/verify/", VerifyView.as_view()),
+    path("api/v1/web/bind-email/", BindEmailView.as_view()),
     path("api/v1/auth/refresh/", TokenRefreshView.as_view()),
     path("api/v1/auth/logout/", LogoutView.as_view()),
     path("api/v1/snapshot/", SnapshotView.as_view()),

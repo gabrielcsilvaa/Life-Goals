@@ -48,7 +48,14 @@ export type Card = {
   invoice_paid: string;
 };
 export type Snapshot = {
-  user: { name: string; username: string; timezone: string };
+  user: {
+    name: string;
+    username: string;
+    timezone: string;
+    email?: string;
+    email_verified?: boolean;
+    preferences?: { hide_amounts?: boolean };
+  };
   month: string;
   as_of: string;
   summary: Record<
