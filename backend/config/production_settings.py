@@ -3,13 +3,14 @@
 import os
 from urllib.parse import urlsplit
 
+import certifi
 from django.core.exceptions import ImproperlyConfigured
 
 from .environment import required
 from .settings import *  # noqa: F403
 
 DEBUG = False
-APP_VERSION = required("APP_VERSION")
+APP_VERSION = os.getenv("APP_VERSION") or required("RENDER_GIT_COMMIT")
 SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^ready/$"]
 SECRET_KEY = required("SECRET_KEY")
 if len(SECRET_KEY) < 50:
@@ -31,8 +32,9 @@ if "*" in ALLOWED_HOSTS or any(not host for host in ALLOWED_HOSTS):
 if DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":  # noqa: F405
     raise ImproperlyConfigured("Produção exige PostgreSQL persistente.")
 DATABASES["default"].setdefault("OPTIONS", {})["sslmode"] = "verify-full"  # noqa: F405
-if os.getenv("DB_SSLROOTCERT"):
-    DATABASES["default"]["OPTIONS"]["sslrootcert"] = os.environ["DB_SSLROOTCERT"]  # noqa: F405
+DATABASES["default"]["OPTIONS"]["sslrootcert"] = os.getenv(  # noqa: F405
+    "DB_SSLROOTCERT", certifi.where()
+)
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [FRONTEND_ORIGIN]
 CORS_ALLOW_CREDENTIALS = True
@@ -57,12 +59,19 @@ SECURE_HSTS_PRELOAD = False
 SECURE_REFERRER_POLICY = "no-referrer"
 X_FRAME_OPTIONS = "DENY"
 REQUIRE_EMAIL_VERIFICATION = True
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = required("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = required("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = required("EMAIL_HOST_PASSWORD")
-EMAIL_USE_TLS = True
+EMAIL_TRANSPORT = os.getenv("EMAIL_TRANSPORT", "smtp")
+if EMAIL_TRANSPORT == "brevo":
+    EMAIL_BACKEND = "identity.email_backend.BrevoEmailBackend"
+    BREVO_API_KEY = required("BREVO_API_KEY")
+elif EMAIL_TRANSPORT == "smtp":
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = required("EMAIL_HOST")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = required("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = required("EMAIL_HOST_PASSWORD")
+    EMAIL_USE_TLS = True
+else:
+    raise ImproperlyConfigured("EMAIL_TRANSPORT deve ser smtp ou brevo.")
 EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = required("DEFAULT_FROM_EMAIL")
 LOGGING = {

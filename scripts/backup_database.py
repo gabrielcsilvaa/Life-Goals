@@ -5,7 +5,9 @@ import subprocess
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
+import certifi
 from dotenv import dotenv_values
 
 
@@ -19,6 +21,17 @@ def main():
     target = Path(values["BACKUP_DIR"]).resolve()
     if not target.is_dir():
         raise SystemExit("Create a private persistent BACKUP_DIR first.")
+    if values.get("DATABASE_URL"):
+        url = urlsplit(values["DATABASE_URL"])
+        if url.scheme not in {"postgres", "postgresql"} or not url.hostname:
+            raise SystemExit("Invalid PostgreSQL backup URL.")
+        values.update(
+            DB_HOST=url.hostname,
+            DB_PORT=str(url.port or 5432),
+            DB_NAME=unquote(url.path.lstrip("/")),
+            DB_USER=unquote(url.username or ""),
+            DB_PASSWORD=unquote(url.password or ""),
+        )
     env = {
         **os.environ,
         "PGHOST": values["DB_HOST"],
@@ -28,8 +41,7 @@ def main():
         "PGPASSWORD": values["DB_PASSWORD"],
         "PGSSLMODE": "verify-full",
     }
-    if values.get("DB_SSLROOTCERT"):
-        env["PGSSLROOTCERT"] = values["DB_SSLROOTCERT"]
+    env["PGSSLROOTCERT"] = values.get("DB_SSLROOTCERT") or certifi.where()
     destination = target / (
         "lifegoals-" + datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + ".dump.age"
     )
