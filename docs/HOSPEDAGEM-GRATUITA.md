@@ -22,6 +22,8 @@ Fontes: [Render Free](https://render.com/docs/free), [Neon](https://neon.com/pri
 
 O CI testa PRs e pushes em develop/main. O release só aceita CI aprovado de um push na main, confere se o SHA ainda é o atual, serializa as publicações e publica o frontend somente após a saúde do backend.
 
+Na primeira ativação, `CUTOVER_READY` fica falso até a conferência final entre a origem local e a cópia no Neon e a definição de uma única origem de escrita. Isso impede que uma aprovação posterior publique uma cópia desatualizada enquanto o aplicativo local continua sendo usado. Após o corte validado e o release inicial acompanhado, permanece verdadeiro e as atualizações aprovadas da main seguem automaticamente. Não ativar somente para contornar uma falha de deploy.
+
 Para Render, configure `BACKEND_PROVIDER=render`. O serviço deve usar Docker, repositório Life-Goals, branch main, plano Free e autodeploy nativo desligado. `scripts/deploy_render.py` aciona o SHA aprovado pela API e aguarda o estado live. O perfil Django usa `RENDER_GIT_COMMIT` como versão quando APP_VERSION não está definido. Não fixar APP_VERSION antigo no painel.
 
 Antes de acionar o backend, o workflow cria um dump do PostgreSQL 18, valida o catálogo, criptografa com age e retém somente o arquivo criptografado como artefato por 14 dias. Se backup, retenção ou gate de migrations falhar, não publica. A chave privada age deve ficar fora do GitHub; somente o destinatário público entra nas variables. O primeiro bootstrap e a transferência dos dados são operações separadas e revisadas, não uma migration automática sobre banco vazio.
@@ -32,7 +34,7 @@ O caminho SSH/Compose continua disponível para futura VPS; selecione outro BACK
 
 | Tipo | Configuração |
 | --- | --- |
-| Variables | BACKEND_PROVIDER=render; RENDER_SERVICE_ID; BACKEND_ORIGIN; FRONTEND_ORIGIN; VERCEL_ORG_ID; VERCEL_PROJECT_ID; BACKUP_AGE_RECIPIENT |
+| Variables | BACKEND_PROVIDER=render; RENDER_SERVICE_ID; BACKEND_ORIGIN; FRONTEND_ORIGIN; VERCEL_ORG_ID; VERCEL_PROJECT_ID; BACKUP_AGE_RECIPIENT; CUTOVER_READY |
 | Secrets | RENDER_API_KEY com permissões limitadas; MIGRATION_DATABASE_URL direta; VERCEL_TOKEN restrito ao projeto |
 
 Não usar o ID Vercel da demonstração no release real. A integração Git nativa da Vercel e o autodeploy nativo do Render ficam desligados para haver um único publicador.

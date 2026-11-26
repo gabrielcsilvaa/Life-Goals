@@ -31,7 +31,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PROVIDER: ${{ vars.BACKEND_PROVIDER }}
           RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          CUTOVER_READY: ${{ vars.CUTOVER_READY }}
         run: |
+          test "$CUTOVER_READY" = true || { echo 'Initial data cutover is not validated. No production deployment performed.'; exit 1; }
           test -n "$BACKEND_ORIGIN"
           if [ "$PROVIDER" = render ]; then
             test -n "$RENDER_SERVICE_ID"
