@@ -5,6 +5,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Icon, colors } from "./ui";
 import { dashboardTheme as theme } from "../design/dashboard";
 import { today } from "../lib/money";
+import { displayDate, parseDateInput } from "../lib/formats";
 
 export function DateField({
   label,
@@ -12,16 +13,18 @@ export function DateField({
   onChange,
   optional = false,
   monthOnly = false,
+  salaryShortcut = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   optional?: boolean;
   monthOnly?: boolean;
+  salaryShortcut?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(value);
-  const display = valid ? value.split("-").reverse().join("/") : value;
+  const display = displayDate(value, monthOnly);
   const selected = valid
     ? new Date(`${value}T12:00:00`)
     : new Date(`${today()}T12:00:00`);
@@ -32,15 +35,11 @@ export function DateField({
         <TextInput
           accessibilityLabel={label}
           value={display}
-          placeholder="DD/MM/AAAA"
+          placeholder={monthOnly ? "MM/AAAA" : "DD/MM/AAAA"}
+          keyboardType="numbers-and-punctuation"
           placeholderTextColor={colors.muted}
           onChangeText={(text) => {
-            const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
-            onChange(
-              match
-                ? `${match[3]}-${match[2]}-${monthOnly ? "01" : match[1]}`
-                : text,
-            );
+            onChange(parseDateInput(text, monthOnly));
           }}
           style={{
             minHeight: 52,
@@ -104,7 +103,7 @@ export function DateField({
           }}
         />
       )}
-      {!monthOnly && (
+      {!monthOnly && salaryShortcut && (
         <View style={{ gap: 4 }}>
           <Pressable
             accessibilityRole="button"
@@ -154,7 +153,7 @@ export function DateField({
           accessibilityRole="button"
           accessibilityLabel={`Limpar ${label}`}
           onPress={() => onChange("")}
-          style={{ minHeight: 40, justifyContent: "center" }}
+          style={{ minHeight: 44, justifyContent: "center" }}
         >
           <Text
             style={{

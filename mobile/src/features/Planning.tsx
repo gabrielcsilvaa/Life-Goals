@@ -1,7 +1,7 @@
 import { dashboardTheme as theme } from "../design/dashboard";
 import { BudgetOverview } from "./BudgetOverview";
 import { useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { Text, View } from "react-native";
 import {
   Amount,
@@ -20,6 +20,7 @@ import { cents, decimal } from "../lib/money";
 export default function Planning() {
   const { data, openForm } = useApp();
   const { section } = useLocalSearchParams<{ section?: string }>();
+  const [calculationExpanded, setCalculationExpanded] = useState(false);
   const budget = !section || section === "budget";
   return (
     <Screen
@@ -41,7 +42,8 @@ export default function Planning() {
       {!!data && (
         <>
           {budget && <BudgetOverview />}
-          {budget && (
+          {budget && <Button title={calculationExpanded ? "Recolher cálculo" : "Entenda o cálculo"} secondary onPress={() => setCalculationExpanded(!calculationExpanded)} />}
+          {budget && calculationExpanded && (
             <Card>
               <Heading
                 title="Como chegamos ao disponível"

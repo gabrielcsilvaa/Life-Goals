@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-test("expense saves without description and becomes visible despite an income filter", async ({
+test("expense saves without description and preserves the current income filter", async ({
   page,
 }) => {
   await page.goto("/transactions");
@@ -12,6 +12,8 @@ test("expense saves without description and becomes visible despite an income fi
     .click();
   await page.getByRole("radio", { name: "Transporte", exact: true }).click();
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(page.getByText("-R$ 12,34", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", {name: "Todos", exact: true}).click();
   await expect(page.getByText("-R$ 12,34", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Adicionar", exact: true }).click();
   await page.getByRole("button", { name: "Despesa fixa", exact: true }).click();

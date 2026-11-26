@@ -38,7 +38,7 @@ type Context = {
   closeForm: () => void;
   run: (operation: string, payload: Payload) => Promise<Payload | undefined>;
   notify: (message: string) => void;
-  reload: () => Promise<void>;
+  reload: () => Promise<boolean>;
   signIn: (
     url: string,
     username: string,
@@ -48,6 +48,10 @@ type Context = {
   ) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
+  transactionView: { filter: string; query: string; category: string };
+  setTransactionView: (
+    changes: Partial<{ filter: string; query: string; category: string }>,
+  ) => void;
 };
 const AppContext = createContext<Context | null>(null);
 const DEMO_KEY = "lifegoals-demo-v1";
@@ -66,6 +70,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Snapshot | null>(initial.data);
   const [loading, setLoading] = useState(false),
     [busy, setBusy] = useState(false);
+  const sessionEpoch = useRef(0);
+  const [transactionViews, setTransactionViews] = useState<
+    Record<string, { filter: string; query: string; category: string }>
+  >({});
+  const viewKey = `${mode}:${data?.user.username || ""}:${month}`;
+  const transactionView = transactionViews[viewKey] || {
+    filter: "all",
+    query: "",
+    category: "",
+  };
   const userIntent = useRef(0);
   const skipNextReload = useRef(false);
   const [error, setError] = useState(""),
@@ -132,7 +146,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const reload = useCallback((): Promise<void> => {
+  const refreshFailed = useRef(false);
+  const reload = useCallback((): Promise<boolean> => {
     const current = ++sequence.current;
     const request =
       mode === "demo"
@@ -143,16 +158,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (current === sequence.current) {
           setData(result);
           setError("");
+          refreshFailed.current = false;
         }
+        return current === sequence.current;
       })
       .catch((e) => {
-        if (current === sequence.current)
+        if (current === sequence.current) {
+          refreshFailed.current = true;
           setError(e instanceof Error ? e.message : "Falha ao carregar.");
+        }
+        return false;
       })
       .finally(() => {
         if (current === sequence.current) setLoading(false);
       });
   }, [demo, mode, month]);
+  const latestReload = useRef(reload);
+  useEffect(() => {
+    latestReload.current = reload;
+  }, [reload]);
   useEffect(() => {
     if (skipNextReload.current) {
       skipNextReload.current = false;
@@ -165,7 +189,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const listener = AppState.addEventListener("change", (state) => {
       if (state === "active") void reload();
     });
-    return () => listener.remove();
+    const timer = setInterval(() => {
+      if (AppState.currentState === "active" && !working.current) void reload();
+    }, 60000);
+    return () => {
+      listener.remove();
+      clearInterval(timer);
+    };
   }, [mode, reload]);
   useEffect(() => {
     if (!notice) return;
@@ -189,6 +219,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (working.current) return;
     userIntent.current++;
     const initiatingFormId = form?.id;
+    const epoch = sessionEpoch.current;
     working.current = true;
     setBusy(true);
     setError("");
@@ -204,21 +235,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           payload,
         );
         await AsyncStorage.setItem(DEMO_KEY, JSON.stringify(updated));
+        if (epoch !== sessionEpoch.current) return;
         demoRef.current = updated;
         setDemo(updated);
         if (operation === "create_goal")
           result = { id: updated.goals[updated.goals.length - 1].id };
       } else {
         result = await api.command(operation, payload, key);
-        await reload();
+        if (epoch !== sessionEpoch.current) return result;
+        await latestReload.current();
+        if (epoch !== sessionEpoch.current) return result;
       }
       pending.current.delete(fingerprint);
       setForm((current) => (current?.id === initiatingFormId ? null : current));
       setNotice(
-        mode === "demo" ? "Salvo nesta demonstração." : "Operação registrada.",
+        mode === "demo"
+          ? "Salvo nesta demonstração."
+          : refreshFailed.current
+            ? "Operação salva. Não foi possível atualizar os dados; tente atualizar a tela."
+            : "Operação registrada.",
       );
       return result;
     } catch (e) {
+      if (epoch !== sessionEpoch.current) return;
       if (e instanceof api.ApiError && e.status >= 400 && e.status < 500)
         pending.current.delete(fingerprint);
       const message =
@@ -238,10 +277,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     email?: string,
   ) {
     userIntent.current++;
+    const epoch = ++sessionEpoch.current;
+    pending.current.clear();
     await api.login(url, username, password, name, email);
     // Confirm the database and account work before leaving the isolated demo.
     const currentMonth = today().slice(0, 7);
     const initial = await api.getSnapshot(currentMonth);
+    if (epoch !== sessionEpoch.current) return;
     sequence.current++;
     skipNextReload.current = true;
     setData(initial);
@@ -252,6 +294,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
   async function signOut() {
     userIntent.current++;
+    sessionEpoch.current++;
+    sequence.current++;
+    setForm(null);
+    setNotice("");
+    setError("");
     try {
       await api.logout();
     } finally {
@@ -265,13 +312,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider
       value={{
+        transactionView,
+        setTransactionView: (changes) =>
+          setTransactionViews((views) => ({
+            ...views,
+            [viewKey]: { ...transactionView, ...changes },
+          })),
         mode,
         month,
         setMonth: (value) => {
           userIntent.current++;
+          sequence.current++;
           if (mode === "demo")
             void AsyncStorage.setItem(DEMO_MONTH_KEY, value).catch(() => {});
           setLoading(true);
+          setData(null);
           setMonth(value);
         },
         data,
@@ -290,7 +345,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         },
         closeForm: () => setForm(null),
         run,
-        notify: setNotice,
+        notify: (message) =>
+          setNotice(
+            refreshFailed.current
+              ? `${message} Não foi possível atualizar os dados; tente atualizar a tela.`
+              : message,
+          ),
         reload,
         signIn,
         signOut,

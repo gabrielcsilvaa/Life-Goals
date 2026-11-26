@@ -2,6 +2,7 @@ import { canReuseAccess, restoredServerBase } from "./sessionPolicy";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { Connection, Entry, Payload, Snapshot } from "./types";
+import { fetchJson } from "./transport";
 
 let access = "";
 let refresh = "";
@@ -21,9 +22,11 @@ function details(value: unknown): string {
   if (typeof value === "string") return value;
   if (Array.isArray(value)) return value.map(details).join(" ");
   if (value && typeof value === "object")
-    return Object.entries(value)
-      .map(([key, v]) => `${key}: ${details(v)}`)
-      .join(" · ");
+    return (
+      Object.entries(value)
+        .map(([key, v]) => `${key}: ${details(v)}`)
+        .join(" · ") || "Não foi possível concluir a operação."
+    );
   return "Não foi possível concluir a operação.";
 }
 async function saveSession() {
@@ -87,32 +90,30 @@ async function request(
   allowRefresh = true,
 ): Promise<any> {
   if (auth && !access) await renew();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
   let response: Response;
+  let data: any;
+  const generation = sessionGeneration;
   try {
-    response = await fetch(`${base}${path}`, {
+    ({ response, data } = await fetchJson(`${base}${path}`, {
       ...init,
-      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(auth ? { Authorization: `Bearer ${access}` } : {}),
         ...init.headers,
       },
-    });
+    }));
   } catch {
     throw new ApiError(
       "Sem resposta do servidor. Confira a conexão. Uma tentativa repetida manterá a mesma identificação.",
     );
-  } finally {
-    clearTimeout(timeout);
   }
+  if (auth && generation !== sessionGeneration)
+    throw new ApiError("A sessão foi alterada.", 409);
   if (response.status === 401 && auth && allowRefresh) {
     await renew();
     return request(path, init, true, false);
   }
   if (response.status === 204) return null;
-  const data = await response.json().catch(() => ({}));
   if (!response.ok)
     throw new ApiError(details(data.error?.details || data), response.status);
   return data;
@@ -130,7 +131,9 @@ export async function login(
     (!__DEV__ && parsed.protocol !== "https:")
   )
     throw new ApiError("Use uma URL HTTPS válida para o servidor.");
-  sessionGeneration++;
+  const generation = ++sessionGeneration;
+  access = "";
+  refresh = "";
   base = url.replace(/\/$/, "");
   const data = await request(
     `/api/v1/auth/${displayName ? "register" : "token"}/`,
@@ -144,6 +147,8 @@ export async function login(
     },
     false,
   );
+  if (generation !== sessionGeneration)
+    throw new ApiError("A sessão foi alterada.", 409);
   access = data.access;
   refresh = data.refresh;
   await saveSession();

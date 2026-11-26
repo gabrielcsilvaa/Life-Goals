@@ -1,3 +1,4 @@
+import { formatMoneyInput } from "../lib/formats";
 import { suggestedCardDueDate } from "../lib/cardDates";
 import { fifthBusinessDay } from "../lib/businessDays";
 import { acceptsCategory } from "../lib/categoryRules";
@@ -489,6 +490,8 @@ function CommandForm({
           (f.type === "choice" ? f.choices?.[0]?.value : "") ??
           "",
       );
+    for (const f of config.fields)
+      if (f.type === "money") initial[f.key] = formatMoneyInput(initial[f.key]);
     return initial;
   });
   const transactionKind =
@@ -528,6 +531,39 @@ function CommandForm({
             ? { ...field, label: "Recebido em (AAAA-MM-DD)" }
             : field,
   );
+  const normalizedFields = fields.map((field) => ({
+    ...field,
+    label:
+      field.type === "date"
+        ? field.label.replace(/\s*\(AAAA[^)]*\)/g, "")
+        : field.label,
+  }));
+  const initialDraft = useRef(
+    JSON.stringify({
+      values,
+      destination,
+      cover,
+      goalType,
+      repeatMonthly,
+      salaryFifth,
+      realized,
+    }),
+  );
+  const [confirmClose, setConfirmClose] = useState(false);
+  function requestClose() {
+    if (busy) return;
+    const current = JSON.stringify({
+      values,
+      destination,
+      cover,
+      goalType,
+      repeatMonthly,
+      salaryFifth,
+      realized,
+    });
+    if (current !== initialDraft.current) setConfirmClose(true);
+    else closeForm();
+  }
   const submitting = useRef(false);
   async function submit() {
     if (submitting.current) return;
@@ -545,7 +581,7 @@ function CommandForm({
         payload.due_rule = salaryFifth
           ? "salary_fifth_business_day"
           : "calendar_day";
-      for (const field of fields) {
+      for (const field of normalizedFields) {
         const value = (
           operation === "create_goal" &&
           field.key === "name" &&
@@ -613,7 +649,9 @@ function CommandForm({
       if (operation === "create_transaction" && !realized)
         payload.paid_on = null;
       if (operation === "correct_transaction") payload.realized = realized;
-      const categoryField = fields.find((f) => f.key === "category_id");
+      const categoryField = normalizedFields.find(
+        (f) => f.key === "category_id",
+      );
       if (
         categoryField &&
         !categoryField.choices?.some((c) => c.value === payload.category_id)
@@ -701,11 +739,11 @@ function CommandForm({
       transparent
       animationType="slide"
       onRequestClose={() => {
-        if (!busy) closeForm();
+        if (!busy) requestClose();
       }}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.overlay}
       >
         <View
@@ -729,7 +767,13 @@ function CommandForm({
               accessibilityRole="button"
               accessibilityLabel="Fechar formulário"
               disabled={busy}
-              onPress={closeForm}
+              onPress={requestClose}
+              style={{
+                minWidth: 44,
+                minHeight: 44,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <Icon name="close" size={25} />
             </Pressable>
@@ -973,7 +1017,7 @@ function CommandForm({
                     : "Receita prevista: a data não confirma recebimento e este valor ainda não entra no saldo."}
                 </Text>
               )}
-            {fields
+            {normalizedFields
               .filter(
                 (field) =>
                   !(salaryFifth && field.key === "day") &&
@@ -1132,6 +1176,9 @@ function CommandForm({
                   ) : field.type === "date" ? (
                     <DateField
                       label={field.label}
+                      salaryShortcut={
+                        field.key === "due_date" && transactionKind === "income"
+                      }
                       value={values[field.key] || ""}
                       onChange={(value) =>
                         setValues((v) => ({
@@ -1208,6 +1255,13 @@ function CommandForm({
                           },
                       ]}
                       value={values[field.key] || ""}
+                      onBlur={() => {
+                        if (field.type === "money")
+                          setValues((v) => ({
+                            ...v,
+                            [field.key]: formatMoneyInput(v[field.key] || ""),
+                          }));
+                      }}
                       onChangeText={(text) =>
                         setValues((v) => ({ ...v, [field.key]: text }))
                       }
@@ -1238,11 +1292,25 @@ function CommandForm({
               {localError || error}
             </Text>
           )}
+          {confirmClose && (
+            <View
+              accessibilityRole="alert"
+              style={{ gap: 10, paddingVertical: 12 }}
+            >
+              <Text style={styles.label}>Descartar o que você preencheu?</Text>
+              <Button
+                title="Continuar preenchendo"
+                secondary
+                onPress={() => setConfirmClose(false)}
+              />
+              <Button title="Descartar alterações" danger onPress={closeForm} />
+            </View>
+          )}
           <View style={styles.actions}>
             <Button
               title="Voltar"
               secondary
-              onPress={closeForm}
+              onPress={requestClose}
               disabled={busy}
             />
             <View style={{ flex: 1 }}>

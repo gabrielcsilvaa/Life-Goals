@@ -74,7 +74,7 @@ export function GettingStarted() {
       action: () => openForm("create_account", { name: "Conta principal" }),
     },
     {
-      title: "Adicionar Categorias a mais de despesas'",
+      title: "Categorias para receitas e despesas",
       detail:
         "Transporte, alimentação e outras. Você pode criar categorias específicas em Ajustes.",
       done: !!data?.categories.length,

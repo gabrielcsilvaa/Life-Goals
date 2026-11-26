@@ -25,7 +25,7 @@ function client(
       },
     },
   ).outputText;
-  vm.runInNewContext(code, {
+  const environment: Record<string, any> = {
     exports,
     process: { env: {} },
     __DEV__: true,
@@ -44,6 +44,23 @@ function client(
         };
       if (name === "./sessionPolicy")
         return { canReuseAccess, restoredServerBase };
+      if (name === "./transport") {
+        const module: Record<string, any> = {};
+        const source = ts.transpileModule(
+          readFileSync(
+            new URL("../src/lib/transport.ts", import.meta.url),
+            "utf8",
+          ),
+          {
+            compilerOptions: {
+              module: ts.ModuleKind.CommonJS,
+              target: ts.ScriptTarget.ES2022,
+            },
+          },
+        ).outputText;
+        vm.runInNewContext(source, { ...environment, exports: module });
+        return module;
+      }
       throw new Error(`Unexpected import ${name}`);
     },
     fetch: async (url: string) => {
@@ -73,7 +90,8 @@ function client(
         json: async () => ({ month: "2026-11" }),
       };
     },
-  });
+  };
+  vm.runInNewContext(code, environment);
   return { api: exports, requests, stored: () => JSON.parse(stored) };
 }
 test("valid saved iPhone session opens dashboard with one network request", async () => {

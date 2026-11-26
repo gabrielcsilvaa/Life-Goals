@@ -1,5 +1,5 @@
 import { categoryKind } from "../lib/categoryRules";
-import { Link, router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { dashboardTheme as theme } from "../design/dashboard";
 import SettingsHub from "./SettingsHub";
 import Planning from "./Planning";
@@ -28,14 +28,23 @@ import {
 } from "../components/ui";
 
 export default function Settings() {
-  const { section } = useLocalSearchParams<{ section?: string }>();
+  const { section, register } = useLocalSearchParams<{
+    section?: string;
+    register?: string;
+  }>();
+  const { mode } = useApp();
   if (!section) return <SettingsHub />;
   if (section === "cards") return <Planning />;
-  return <SettingsDetail section={section} />;
+  return (
+    <SettingsDetail
+      key={`${mode}:${section}:${register || ""}`}
+      section={section}
+    />
+  );
 }
 function SettingsDetail({ section }: { section: string }) {
   const params = useLocalSearchParams<{ register?: string }>();
-  const { data, mode, signIn, signOut, openForm } = useApp();
+  const { data, mode, signIn, signOut, hidden, setHidden, openForm } = useApp();
   const [url, setUrl] = useState(api.serverUrl()),
     [username, setUsername] = useState(""),
     [password, setPassword] = useState(""),
@@ -51,12 +60,21 @@ function SettingsDetail({ section }: { section: string }) {
   const [token, setToken] = useState(""),
     [revoke, setRevoke] = useState<Connection | null>(null);
   useEffect(() => {
-    if (mode === "live")
-      api
+    let current = true;
+    if (mode !== "live") return;
+    if (section === "mcp")
+      void api
         .getConnections()
-        .then(setConnections)
-        .catch((e) => setError(e.message));
-  }, [mode]);
+        .then((items) => {
+          if (current) setConnections(items);
+        })
+        .catch((e) => {
+          if (current) setError(e.message);
+        });
+    return () => {
+      current = false;
+    };
+  }, [mode, section]);
   async function auth() {
     if (busy) return;
     setBusy(true);
@@ -117,36 +135,34 @@ function SettingsDetail({ section }: { section: string }) {
               ? "Conexões com IA"
               : "Minha conta"
       }
-      subtitle="Suas contas, preferências e conexões."
+      subtitle={
+        section === "account"
+          ? "Seu perfil e suas preferências."
+          : "Suas contas, preferências e conexões."
+      }
+      onBack={() =>
+        router.canGoBack() ? router.back() : router.replace("/settings")
+      }
       showMonth={false}
     >
-      <Link
-        href="/settings"
-        accessibilityLabel="Voltar às configurações"
-        style={{
-          color: colors.teal,
-          paddingVertical: 12,
-          fontFamily: theme.font.medium,
-        }}
-      >
-        Voltar às configurações
-      </Link>
       {section === "account" && (
-        <Card>
+        <Card
+          style={mode === "live" ? { borderWidth: 0, padding: 0 } : undefined}
+        >
           <Heading
             title={
               mode === "demo"
                 ? register
                   ? "Criar minha conta"
                   : "Entrar na minha conta"
-                : `Olá, ${data?.user.name}`
+                : data?.user.name || "Seu perfil"
             }
             detail={
               mode === "demo"
                 ? register
                   ? "Sua conta começa vazia, sem importar o exemplo de 2027."
                   : "Acesse seus registros pessoais."
-                : "Você está usando o backend configurado."
+                : `@${data?.user.username || ""} · Conta pessoal`
             }
           />
           {mode === "demo" ? (
@@ -192,7 +208,7 @@ function SettingsDetail({ section }: { section: string }) {
                     keyboardType={
                       label === "E-mail" ? "email-address" : "default"
                     }
-                    autoCorrect={label === "E-mail" ? false : undefined}
+                    autoCorrect={false}
                     secureTextEntry={label === "Senha"}
                     autoComplete={
                       label === "Senha"
@@ -247,7 +263,59 @@ function SettingsDetail({ section }: { section: string }) {
             </View>
           ) : (
             <>
-              <Muted>{api.serverUrl()}</Muted>
+              <View style={{ gap: 16 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <Icon name="shield-checkmark-outline" color={colors.teal} />
+                  <Text style={styles.label}>Acesso individual</Text>
+                </View>
+                <Muted>Seus registros são salvos na sua conta pessoal.</Muted>
+                <Text style={styles.label}>Preferências</Text>
+                <Button
+                  title={
+                    hidden
+                      ? "Mostrar valores financeiros"
+                      : "Ocultar valores financeiros"
+                  }
+                  secondary
+                  onPress={() => setHidden(!hidden)}
+                />
+                <Muted>
+                  Fuso horário: {data?.user.timezone || "America/Sao_Paulo"}
+                </Muted>
+                <Button
+                  title="Gerenciar conexões com IA"
+                  secondary
+                  onPress={() =>
+                    router.push({
+                      pathname: "/settings",
+                      params: { section: "mcp" },
+                    })
+                  }
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: advanced }}
+                  onPress={() => setAdvanced(!advanced)}
+                  style={{ minHeight: 44, justifyContent: "center" }}
+                >
+                  <Text style={styles.label}>
+                    Configuração avançada {advanced ? "−" : "+"}
+                  </Text>
+                </Pressable>
+                {advanced && (
+                  <View style={{ gap: 8 }}>
+                    <Muted>Servidor de dados</Muted>
+                    <Text selectable style={styles.label}>
+                      {api.serverUrl()}
+                    </Text>
+                    <Muted>
+                      Altere a conexão somente ao entrar em uma conta.
+                    </Muted>
+                  </View>
+                )}
+              </View>
               <Button
                 title="Sair da conta"
                 secondary
@@ -420,9 +488,8 @@ function SettingsDetail({ section }: { section: string }) {
                 Nenhuma IA conectada
               </Text>
               <Muted>
-                Entre na conta real para criar e revogar conexões. Tokens
-                pessoais estão disponíveis nesta versão; conexão OAuth será
-                adicionada em outra etapa.
+                Entre na conta real para criar e revogar conexões. Você pode
+                autorizar um cliente de IA por OAuth ou criar um token pessoal.
               </Muted>
             </View>
           ) : (

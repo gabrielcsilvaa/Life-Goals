@@ -35,10 +35,10 @@ test("card current invoice and subsequent expense add only once", async ({
     .click();
   await page.getByRole("radio", { name: "Transporte", exact: true }).click();
   await page
-    .getByLabel("Data da compra (AAAA-MM-DD)", { exact: true })
+    .getByLabel("Data da compra", { exact: true })
     .fill("01/11/2026");
   await page
-    .getByLabel("Primeiro vencimento (AAAA-MM-DD)", { exact: true })
+    .getByLabel("Primeiro vencimento", { exact: true })
     .fill("12/01/2027");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.getByText("R$ 600,00", { exact: true })).toBeVisible();

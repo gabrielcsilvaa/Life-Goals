@@ -119,7 +119,7 @@ test("redesign: reference screens, goal detail, continent covers and persistence
   await page.getByRole("button", { name: "Adicionar", exact: true }).click();
   await page.getByRole("button", { name: "Despesa", exact: true }).click();
   await expect(
-    page.getByText("Registrar lançamento", { exact: true }),
+    page.getByText("Registrar despesa", { exact: true }),
   ).toBeVisible();
   await page.getByLabel("Valor (R$)", { exact: true }).fill("18,50");
   await page.getByLabel("Descrição", { exact: true }).fill("Uber Moto");

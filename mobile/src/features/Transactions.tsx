@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import {
   Amount,
@@ -17,28 +17,15 @@ import { shortDate, today } from "../lib/money";
 import { EntryRow } from "./EntryRow";
 
 export default function Transactions() {
-  const { data, openForm } = useApp();
-  const [filter, setFilter] = useState("all"),
-    [query, setQuery] = useState(""),
-    [category, setCategory] = useState("");
+  const { data, openForm, transactionView, setTransactionView } = useApp();
+  const { filter, query, category } = transactionView;
+  const setFilter = (filter: string) => setTransactionView({ filter });
+  const setQuery = (query: string) => setTransactionView({ query });
+  const setCategory = (category: string) => setTransactionView({ category });
   const [older, setOlder] = useState<{
     snapshot: Snapshot;
     entries: Entry[];
   } | null>(null);
-  const previousList = useRef({
-    month: data?.month,
-    count: data?.entry_count || 0,
-  });
-  useEffect(() => {
-    if (!data) return;
-    const previous = previousList.current;
-    if (previous.month !== data.month || data.entry_count > previous.count) {
-      setFilter("all");
-      setQuery("");
-      setCategory("");
-    }
-    previousList.current = { month: data.month, count: data.entry_count };
-  }, [data]);
   const [loadingMore, setLoadingMore] = useState(false),
     [pageError, setPageError] = useState("");
   const extra = useMemo(

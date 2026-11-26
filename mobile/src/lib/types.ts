@@ -63,7 +63,7 @@ export type Snapshot = {
     | "goal_plan_remaining"
     | "available",
     string
-  >;
+  > & { projected_available?: string };
   accounts: Account[];
   categories: Category[];
   entries: Entry[];

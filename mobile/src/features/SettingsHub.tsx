@@ -32,7 +32,7 @@ export default function SettingsHub() {
           : go("accounts"),
     },
     {
-      title: "Despesas fixas",
+      title: "Lançamentos fixos",
       detail: "Academia, celular e outras contas recorrentes",
       icon: "repeat-outline" as const,
       action: () =>
