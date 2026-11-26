@@ -143,6 +143,23 @@ def test_login_rejects_malformed_fields_without_server_error(db):
     assert result.status_code == 401
 
 
+def test_recovery_does_not_reveal_account_when_email_provider_fails(db, caplog):
+    client = browser()
+    create(client)
+    refresh_csrf(client)
+    with patch("identity.web.send_link", side_effect=OSError("private@example.com private-provider-token")):
+        known = client.post(
+            "/api/v1/web/recover/", {"email": "person@example.com"}, format="json", secure=True
+        )
+        unknown = client.post(
+            "/api/v1/web/recover/", {"email": "missing@example.com"}, format="json", secure=True
+        )
+    assert known.status_code == unknown.status_code == 200
+    assert known.data == unknown.data
+    assert "private@example.com" not in caplog.text
+    assert "private-provider-token" not in caplog.text
+
+
 @override_settings(REQUIRE_EMAIL_VERIFICATION=True)
 def test_verification_is_required_and_link_is_single_use(db):
     client = browser()
