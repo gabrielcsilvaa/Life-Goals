@@ -122,6 +122,28 @@ def test_duplicate_email_is_rejected_case_insensitively(db):
 
 
 @override_settings(REQUIRE_EMAIL_VERIFICATION=True)
+def test_shared_authentication_backend_requires_verified_email(db):
+    from django.contrib.auth import authenticate
+    from django.utils import timezone
+
+    user = User.objects.create_user(
+        username="new-person", email="person@example.com", password="Strong-test-password-83!"
+    )
+    assert authenticate(username=user.email, password="Strong-test-password-83!") is None
+    user.email_verified_at = timezone.now()
+    user.save(update_fields=["email_verified_at"])
+    assert authenticate(username=user.email, password="Strong-test-password-83!").pk == user.pk
+
+
+def test_login_rejects_malformed_fields_without_server_error(db):
+    client = browser()
+    result = client.post(
+        "/api/v1/web/login/", {"email": {"unexpected": True}, "password": []}, format="json", secure=True
+    )
+    assert result.status_code == 401
+
+
+@override_settings(REQUIRE_EMAIL_VERIFICATION=True)
 def test_verification_is_required_and_link_is_single_use(db):
     client = browser()
     assert create(client).status_code == 202
