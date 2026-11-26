@@ -25,8 +25,7 @@ jobs:
       - name: Install reviewed backup tools
         run: |
           python -m pip install --require-hashes -r backend/requirements.lock
-          sudo apt-get update -qq
-          sudo apt-get install -y age postgresql-client-18
+          bash scripts/install_pg_tools.sh
           mkdir -m 700 "$RUNNER_TEMP/db-backup"
       - name: Dump and encrypt
         env:
