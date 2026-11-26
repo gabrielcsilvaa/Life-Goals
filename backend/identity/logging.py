@@ -8,7 +8,7 @@ class PrivateDataFilter(logging.Filter):
         message = record.getMessage()
         for key, value in os.environ.items():
             if (
-                any(word in key for word in ("PASSWORD", "SECRET", "TOKEN", "DATABASE_URL"))
+                any(word in key for word in ("PASSWORD", "SECRET", "TOKEN", "API_KEY", "DATABASE_URL"))
                 and len(value) >= 8
             ):
                 message = message.replace(value, "[redacted]")
