@@ -1,0 +1,26 @@
+export const dashboardTheme = {
+  color: {
+    background: "#F7F0E8",
+    wideBackground: "#EDE4D8",
+    progressTrack: "#DCD4C7",
+    surface: "#F0E7DC",
+    olive: "#344A35",
+    oliveSoft: "#647252",
+    ink: "#29251F",
+    muted: "#71685D",
+    line: "#DED3C5",
+    onOlive: "#FAF4E9",
+    onOliveMuted: "#E4E6D7",
+    action: "#747A50",
+    sun: "#BD8429",
+    error: "#96493E",
+  },
+  font: {
+    display: "DMSerifDisplay_400Regular",
+    italic: "DMSerifDisplay_400Regular_Italic",
+    body: "Inter_400Regular",
+    medium: "Inter_500Medium",
+  },
+  radius: { balance: 20, goal: 12, control: 8 },
+  space: { gutter: 20, small: 8, group: 12, section: 28 },
+} as const;

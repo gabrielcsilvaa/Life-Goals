@@ -1,0 +1,39 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "../dashboard/italy.png",
+  "purpose": "AI-generated illustrative travel cover images; not actual user trip photographs.",
+  "generated_at": "2026-11-25",
+  "assets": [
+    {
+      "file": "africa.png",
+      "source": "C:\\Users\\Gabriel\\.codex\\generated_images\\01a213ba-026b-72b1-8bcd-7c4206599a01\\exec-9933007e-92e1-480b-bb1b-26d96bfe6704.png",
+      "prompt": "Use case: photorealistic-natural. Asset: one standalone landscape travel savings-goal cover, 3:2. The supplied Rome image is a style reference ONLY. Match its warm golden-hour light, muted hazy apricot sky, earthy olive shadows, subtle photographic grain, timeless calm editorial travel character and real-world photographic detail. This image is illustrative travel art generated for an app, not an interface. Full-bleed picture, no text, logos, watermark, frame, UI, labels, collage or people close-up. Composition should read clearly in a small horizontal card, with a recognizable main scene in the center and generous sky upper quarter. Subject: a tranquil Marrakesh Morocco panorama, Koutoubia minaret rising above warm ochre historic architecture, distant Atlas mountains in a faint atmospheric haze. Genuine Moroccan architectural character, restrained and aspirational. No crowds."
+    },
+    {
+      "file": "asia.png",
+      "source": "C:\\Users\\Gabriel\\.codex\\generated_images\\01a213ba-026b-72b1-8bcd-7c4206599a01\\exec-565f1428-f068-41e0-9820-1aeda65d1894.png",
+      "prompt": "Use case: photorealistic-natural. Asset: one standalone landscape travel savings-goal cover, 3:2. The supplied Rome image is a style reference ONLY. Match its warm golden-hour light, muted hazy apricot sky, earthy olive shadows, subtle photographic grain, timeless calm editorial travel character and real-world photographic detail. This image is illustrative travel art generated for an app, not an interface. Full-bleed picture, no text, logos, watermark, frame, UI, labels, collage or people close-up. Composition should read clearly in a small horizontal card, with a recognizable main scene in the center and generous sky upper quarter. Subject: Kyoto Japan at sunset, a beautiful traditional Japanese pagoda rising over old timber townhouses with dark tiled roofs, distant softly layered mountains. Genuine Japanese architecture, warm terracotta light, muted olive vegetation. No crowds."
+    },
+    {
+      "file": "north-america.png",
+      "source": "C:\\Users\\Gabriel\\.codex\\generated_images\\01a213ba-026b-72b1-8bcd-7c4206599a01\\exec-d6de34ae-3f60-4880-b34c-c6e5ecd6146d.png",
+      "prompt": "Use case: photorealistic-natural. Asset: one standalone landscape travel savings-goal cover, 3:2. The supplied Rome image is a style reference ONLY. Match its warm golden-hour light, muted hazy apricot sky, earthy olive shadows, subtle photographic grain, timeless calm editorial travel character and real-world photographic detail. This image is illustrative travel art generated for an app, not an interface. Full-bleed picture, no text, logos, watermark, frame, UI, labels, collage or people close-up. Composition should read clearly in a small horizontal card, with a recognizable main scene in the center and generous sky upper quarter. Subject: Yosemite Valley in California with monumental El Capitan granite cliffs and Half Dome in the distance, pine trees at the valley floor, warm late-sunset light catching the rock, softly hazy peach sky. Natural believable landscape, no buildings or vehicles."
+    },
+    {
+      "file": "south-america.png",
+      "source": "C:\\Users\\Gabriel\\.codex\\generated_images\\01a213ba-026b-72b1-8bcd-7c4206599a01\\exec-728ef9fb-13d8-4ef1-bc6a-dda24174c15f.png",
+      "prompt": "Use case: photorealistic-natural. Asset: one standalone landscape travel savings-goal cover, 3:2. The supplied Rome image is a style reference ONLY. Match its warm golden-hour light, muted hazy apricot sky, earthy olive shadows, subtle photographic grain, timeless calm editorial travel character and real-world photographic detail. This image is illustrative travel art generated for an app, not an interface. Full-bleed picture, no text, logos, watermark, frame, UI, labels, collage or people close-up. Composition should read clearly in a small horizontal card, with a recognizable main scene in the center and generous sky upper quarter. Subject: Machu Picchu in Peru, iconic ancient Inca stone terraces and Huayna Picchu mountain, dramatic Andean peaks softly hazed behind, golden sunset light warming stone with restrained olive green grass. Recognizable authentic archaeological landscape, no crowds."
+    },
+    {
+      "file": "oceania.png",
+      "source": "C:\\Users\\Gabriel\\.codex\\generated_images\\01a213ba-026b-72b1-8bcd-7c4206599a01\\exec-45830fd5-deff-42ca-9edb-ee50c42cd5f7.png",
+      "prompt": "Use case: photorealistic-natural. Asset: one standalone landscape travel savings-goal cover, 3:2. The supplied Rome image is a style reference ONLY. Match its warm golden-hour light, muted hazy apricot sky, earthy olive shadows, subtle photographic grain, timeless calm editorial travel character and real-world photographic detail. This image is illustrative travel art generated for an app, not an interface. Full-bleed picture, no text, logos, watermark, frame, UI, labels, collage or people close-up. Composition should read clearly in a small horizontal card, with a recognizable main scene in the center and generous sky upper quarter. Subject: Sydney Harbour Australia at sunset, Sydney Opera House recognizable and prominent in middle ground with harbor water in foreground and Harbour Bridge to the distant left, warm sandstone golden highlights, muted apricot sky, softly photographic reflections. No boats in foreground."
+    },
+    {
+      "file": "antarctica.png",
+      "source": "C:\\Users\\Gabriel\\.codex\\generated_images\\01a213ba-026b-72b1-8bcd-7c4206599a01\\exec-48105db1-5b50-4e89-9663-ae3de48d3f87.png",
+      "prompt": "Use case: photorealistic-natural. Asset: one standalone landscape travel savings-goal cover, 3:2. The supplied Rome image is a style reference ONLY. Match its warm golden-hour light, muted hazy apricot sky, earthy olive shadows, subtle photographic grain, timeless calm editorial travel character and real-world photographic detail. This image is illustrative travel art generated for an app, not an interface. Full-bleed picture, no text, logos, watermark, frame, UI, labels, collage or people close-up. Composition should read clearly in a small horizontal card, with a recognizable main scene in the center and generous sky upper quarter. Subject: Antarctic Peninsula coast at low warm polar sunset, sculptural blue-white iceberg and glaciated coastal mountains, calm dark reflective sea with a few small floating ice fragments. Pale apricot light gently catches snowy peaks, subtle icy blue shadows retained for geographic truth. No buildings ships people or animals."
+    }
+  ],
+  "optimization": "720x480 PNG through Expo image-utils; originals preserved under CODEX_HOME/generated_images."
+}

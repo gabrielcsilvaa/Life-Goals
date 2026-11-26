@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Life Goals",
+    "slug": "life-goals",
+    "scheme": "lifegoals",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.lifegoals.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "app.lifegoals.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Life Goals",
+      "description": "Seu dinheiro, seus planos. Um espaço para o que importa.",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen",
+      "expo-image",
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "../../../docs/design/approved-reference.png",
+  "assets": [
+    {
+      "file": "lighthouse.png",
+      "purpose": "decorative transparent cutout, not a logo or mascot",
+      "prompt": "Use case: photorealistic-natural. Create a single isolated raster asset for a mobile finance app, not a UI mockup. The attached image is a visual reference only: study the small lighthouse and rocky headland in the lower-right of its first green balance card. Generate a similarly restrained, realistic old ivory lighthouse with dark bronze lantern roof on a rugged warm ochre coastal rock promontory. Lighthouse vertical near the upper right; cliff slopes from lower left up to right. Transparent background around the entire lighthouse and rock silhouette, no sky, sea or rectangular backdrop. Natural warm afternoon light, desaturated olive shadows, fine photographic detail, softly nostalgic editorial travel feel. Composition is a wide landscape cutout about 3:2; all content lives on the right 60 percent, cliff along bottom, generous transparent space at left. Entire lighthouse visible. No text, numerals, UI, borders, logos, mascots, illustration doodles or extra objects. Output genuinely transparent PNG."
+    },
+    {
+      "file": "italy.png",
+      "purpose": "AI-generated illustrative travel imagery; not an actual user trip photograph",
+      "prompt": "Use case: photorealistic-natural. Asset: a warm editorial travel photograph for a personal savings goal thumbnail, landscape 4:3, not an interface. Reference: the European architecture travel photography in the attached approved mobile UI. Photograph a view over historic Rome rooftops toward a recognizable Italian Renaissance dome at sunset, the dome dominant in the center-left, ochre facades, terracotta roofs, muted hazy apricot sky, warm natural golden light and restrained vintage film color. Photographically plausible architectural detail, quiet and aspirational, no people in foreground. Crop tightly enough that a dome and roofs remain recognizable when used as a 100px-wide thumbnail. No text, typography, logo, watermark, UI or decorative frame. This is a standalone illustrative travel image, not a copy of any photograph."
+    }
+  ],
+  "optimization": "Resized with Expo image-utils; source PNGs preserved under CODEX_HOME/generated_images."
+}
