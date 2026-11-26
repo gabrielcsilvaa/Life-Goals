@@ -6,6 +6,8 @@
 
 Aplicativo de organização financeira pessoal com Expo, Django e integração opcional com IA via MCP.
 
+**PWA e produção:** implementação e CI em validação. Consulte o [guia de produção e CI/CD](docs/PRODUCAO.md) para arquitetura, autenticação, ambientes, backups, deploy e pendências. Nenhum serviço pago ou deploy de produção foi realizado.
+
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-58-000020?logo=expo&logoColor=white)

@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 from django.core import mail
@@ -153,6 +154,27 @@ def test_password_reset_is_single_use_and_revokes_old_session(db):
     assert signed_in.get("/api/v1/web/session/", secure=True).status_code == 401
     assert User.objects.get().check_password("New-strong-password-88!")
     assert AuditEvent.objects.get(action="password_reset").details == {}
+
+
+@override_settings(PASSWORD_RESET_TIMEOUT=1)
+def test_expired_password_reset_cannot_change_credentials(db):
+    from datetime import timedelta
+
+    from django.contrib.auth.tokens import default_token_generator
+
+    client = browser()
+    create(client)
+    refresh_csrf(client)
+    client.post("/api/v1/web/recover/", {"email": "person@example.com"}, format="json", secure=True)
+    payload = {
+        **emailed_token(),
+        "password": "New-strong-password-88!",
+        "password_confirm": "New-strong-password-88!",
+    }
+    later = default_token_generator._now() + timedelta(seconds=3)
+    with patch.object(default_token_generator, "_now", return_value=later):
+        assert client.post("/api/v1/web/reset/", payload, format="json", secure=True).status_code == 400
+    assert User.objects.get().check_password("Strong-test-password-83!")
 
 
 @override_settings(AUTH_ATTEMPTS_PER_WINDOW=2)

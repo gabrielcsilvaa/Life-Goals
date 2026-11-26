@@ -80,7 +80,7 @@ def test_first_use_creates_only_personal_records_without_importing_demo(live_ser
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    user = User.objects.get(username__startswith="first-use-")
+    user = User.objects.get(email__startswith="first-use-")
     assert Account.objects.get(user=user).opening_balance == 500
     assert Entry.objects.filter(user=user).count() == 2
     assert CashMovement.objects.filter(user=user).count() == 2
