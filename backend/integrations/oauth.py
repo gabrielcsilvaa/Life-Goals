@@ -6,7 +6,6 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils import timezone
 from oauth2_provider.oauth2_validators import OAuth2Validator
@@ -14,6 +13,7 @@ from oauth2_provider.views import DynamicClientRegistrationView
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
 from audit.models import AuditEvent
+from identity.throttles import consume_limit
 
 from .models import Connection
 
@@ -91,16 +91,10 @@ class OAuthSafetyMiddleware:
             if request.method == "POST":
                 limit = 12 if path == "/oauth/login/" else 30 if path == "/oauth/register/" else 120
                 period = 3600 if path == "/oauth/register/" else 60
-                bucket = int(timezone.now().timestamp()) // period
-                identity = hashlib.sha256(request.META.get("REMOTE_ADDR", "unknown").encode()).hexdigest()
-                key = f"oauth-limit:{path}:{identity}:{bucket}"
-                if not cache.add(key, 1, period):
-                    try:
-                        count = cache.incr(key)
-                    except ValueError:
-                        count = 1
-                    if count > limit:
-                        return JsonResponse({"error": "temporarily_unavailable"}, status=429)
+                identity = request.META.get("REMOTE_ADDR", "unknown")
+                allowed, _ = consume_limit(f"oauth:{path}:{identity}", limit, period)
+                if not allowed:
+                    return JsonResponse({"error": "temporarily_unavailable"}, status=429)
         response = self.get_response(request)
         if path.startswith(("/oauth/", "/.well-known/")):
             response["Cache-Control"] = "no-store"

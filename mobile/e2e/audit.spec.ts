@@ -18,11 +18,18 @@ async function fakeAccount(
   let rejectedRefresh = false;
   await page.route("**/api/v1/**", async (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith("/auth/token/"))
+    if (url.pathname.endsWith("/web/csrf/"))
+      return route.fulfill({ json: { csrfToken: "synthetic-csrf-token" } });
+    if (url.pathname.endsWith("/web/session/"))
+      return route.fulfill({
+        status: 401,
+        json: { detail: "Anonymous synthetic session" },
+      });
+    if (url.pathname.endsWith("/web/login/"))
       return route.fulfill({
         json: { access: "synthetic-access", refresh: "synthetic-refresh" },
       });
-    if (url.pathname.endsWith("/auth/logout/"))
+    if (url.pathname.endsWith("/web/logout/"))
       return route.fulfill({ status: 204 });
     if (
       url.pathname.endsWith("/snapshot/") &&
@@ -62,7 +69,7 @@ async function fakeAccount(
   });
   await page.goto("/settings?section=account");
   await page
-    .getByRole("textbox", { name: "Usuário", exact: true })
+    .getByRole("textbox", { name: "E-mail ou usuário", exact: true })
     .fill("qa-user");
   await page
     .getByLabel("Senha", { exact: true })

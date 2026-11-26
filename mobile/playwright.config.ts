@@ -11,7 +11,7 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:8081",
     browserName: "chromium",
-    channel: "msedge",
+    channel: process.env.CI ? undefined : "msedge",
     viewport: { width: 390, height: 844 },
     trace: "retain-on-failure",
   },

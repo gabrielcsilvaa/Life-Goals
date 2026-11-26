@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import * as api from "../lib/api";
 import {
   DemoState,
@@ -137,6 +137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setData(snapshot);
         setMonth(snapshot.month);
         setMode("live");
+        setHidden(snapshot.user.preferences?.hide_amounts || false);
         setLoading(false);
         setError("");
       },
@@ -289,6 +290,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setData(initial);
     setMonth(currentMonth);
     setMode("live");
+    setHidden(initial.user.preferences?.hide_amounts || false);
     setForm(null);
     setError("");
   }
@@ -301,7 +303,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setError("");
     try {
       await api.logout();
-    } finally {
+    } catch (e) {
+      if (Platform.OS === "web") throw e;
+    }
+    {
       sequence.current++;
       setData(demoSnapshot(demoRef.current, "2027-01"));
       setMode("demo");
@@ -335,7 +340,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         error,
         notice,
         hidden,
-        setHidden,
+        setHidden: (value) => {
+          setHidden(value);
+          if (mode === "live")
+            void api
+              .updatePreferences(value)
+              .catch(() =>
+                setNotice(
+                  "Preferência aplicada neste dispositivo. Não foi possível salvá-la na conta.",
+                ),
+              );
+        },
         form,
         openForm: (operation, defaults) => {
           if (working.current) return;

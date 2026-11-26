@@ -33,6 +33,24 @@ export default function Settings() {
     register?: string;
   }>();
   const { mode } = useApp();
+  if (api.demoOnly && section)
+    return (
+      <Screen
+        title="Demonstração online"
+        subtitle="Preview com dados fictícios."
+        showMonth={false}
+        onBack={() => router.replace("/")}
+      >
+        <Muted>
+          Contas pessoais ficam desativadas neste ambiente. Nenhuma conexão ao
+          banco real é realizada.
+        </Muted>
+        <Button
+          title="Explorar o exemplo"
+          onPress={() => router.replace("/")}
+        />
+      </Screen>
+    );
   if (!section) return <SettingsHub />;
   if (section === "cards") return <Planning />;
   return (
@@ -187,14 +205,18 @@ function SettingsDetail({ section }: { section: string }) {
                 </Text>
               </Pressable>
               {[
-                ...(advanced ? [["Servidor da API", url, setUrl]] : []),
+                ...(__DEV__ && advanced
+                  ? [["Servidor da API", url, setUrl]]
+                  : []),
                 ...(register
                   ? [
                       ["Seu nome", name, setName],
                       ["E-mail", email, setEmail],
                     ]
                   : []),
-                ["Usuário", username, setUsername],
+                ...(!register
+                  ? [["E-mail ou usuário", username, setUsername]]
+                  : []),
                 ["Senha", password, setPassword],
               ].map(([label, value, setter]) => (
                 <View key={String(label)} style={{ gap: 7 }}>
@@ -242,7 +264,7 @@ function SettingsDetail({ section }: { section: string }) {
                   }
                   disabled={
                     busy ||
-                    !username.trim() ||
+                    (!register && !username.trim()) ||
                     !password ||
                     (register && (!name.trim() || !email.trim()))
                   }
@@ -260,10 +282,61 @@ function SettingsDetail({ section }: { section: string }) {
                   </Text>
                 </Pressable>
               </View>
+              <Button
+                title="Esqueci minha senha"
+                secondary
+                onPress={() => router.push("/recover-account")}
+              />
             </View>
           ) : (
             <>
               <View style={{ gap: 16 }}>
+                <Text selectable style={styles.label}>
+                  {data?.user.email || "E-mail ainda não vinculado"}
+                </Text>
+                <Muted>
+                  {data?.user.email_verified
+                    ? "E-mail confirmado"
+                    : "Confirme seu e-mail para recuperar a conta com segurança."}
+                </Muted>
+                {!data?.user.email_verified && (
+                  <View style={{ gap: 10 }}>
+                    <Text style={styles.label}>
+                      Vincular ou confirmar e-mail
+                    </Text>
+                    <TextInput
+                      accessibilityLabel="E-mail para confirmação"
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      style={styles.input}
+                    />
+                    <TextInput
+                      accessibilityLabel="Senha atual para confirmar e-mail"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      style={styles.input}
+                    />
+                    <Button
+                      title="Enviar confirmação de e-mail"
+                      secondary
+                      disabled={!email.trim() || !password || busy}
+                      onPress={() => {
+                        setBusy(true);
+                        void api
+                          .bindEmail(email, password)
+                          .then((r) => {
+                            setError(r.message);
+                            setPassword("");
+                          })
+                          .catch((e) => setError(e.message))
+                          .finally(() => setBusy(false));
+                      }}
+                    />
+                  </View>
+                )}
                 <View
                   style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
                 >
@@ -322,7 +395,7 @@ function SettingsDetail({ section }: { section: string }) {
                 onPress={() => {
                   void signOut().catch(() =>
                     setError(
-                      "Sessão local encerrada. Não foi possível confirmar a revogação no servidor.",
+                      "Não foi possível confirmar a saída. Verifique a conexão e tente novamente.",
                     ),
                   );
                 }}

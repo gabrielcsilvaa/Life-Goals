@@ -110,7 +110,9 @@ test("live API: login, persist expense, consult summary and disconnect", async (
   await page
     .getByLabel("Servidor da API", { exact: true })
     .fill(process.env.LIFEGOALS_TEST_API!);
-  await page.getByLabel("Usuário", { exact: true }).fill("browser-test");
+  await page
+    .getByLabel("E-mail ou usuário", { exact: true })
+    .fill("browser-test");
   await page.getByLabel("Senha", { exact: true }).fill("Browser-test-only-94!");
   await page
     .getByRole("button", { name: "Entrar na minha conta", exact: true })
@@ -174,6 +176,10 @@ test("live API: login, persist expense, consult summary and disconnect", async (
     page.getByText("Adicionar lançamento fixo", { exact: true }),
   ).toHaveCount(0);
   await page.getByRole("link", { name: "Lançamentos", exact: true }).click();
+  await expect(
+    page.getByText("Despesa fixa real", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
   await expect(
     page.getByText("Despesa fixa real", { exact: true }),
   ).toBeVisible();
