@@ -1,5 +1,6 @@
 """Django sessions for browsers; no authentication tokens are returned to JavaScript."""
 
+import logging
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -170,7 +171,10 @@ class RecoveryView(PublicAuthView):
         email = field.run_validation(request.data.get("email", "")).strip().lower()
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user and user.has_usable_password():
-            send_link(user, "reset-password")
+            try:
+                send_link(user, "reset-password")
+            except OSError:
+                logging.getLogger(__name__).warning("Account recovery email temporarily unavailable.")
         return Response({"message": "Se houver uma conta para esse e-mail, enviaremos as instruções."})
 
 
