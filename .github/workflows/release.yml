@@ -28,9 +28,11 @@ jobs:
           HOST: ${{ vars.BACKEND_SSH_HOST }}
           USER: ${{ vars.BACKEND_SSH_USER }}
           BACKEND_ORIGIN: ${{ vars.BACKEND_ORIGIN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           test -n "$HOST" && test -n "$USER" && test -n "$BACKEND_ORIGIN" || { echo 'Backend hosting is not configured. No deployment performed.'; exit 1; }
           test "$(git rev-parse HEAD)" = "$COMMIT"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$COMMIT" || { echo 'Release superseded by a newer main commit.'; exit 1; }
           echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
       - name: Build versioned backend image
         env: {COMMIT: '${{ github.event.workflow_run.head_sha }}'}
