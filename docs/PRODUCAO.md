@@ -1,5 +1,7 @@
 # Produção, PWA e CI/CD
 
+Para a configuração atual solicitada de Render Free + Neon Free e a separação da demo, consulte [Hospedagem gratuita](HOSPEDAGEM-GRATUITA.md). As seções abaixo registram a preparação inicial e o caminho portátil para VPS.
+
 ## Estado da entrega
 
 Implementação na branch `feature/pwa-secure-auth-production`, criada da `develop`, no [PR 1](https://github.com/gabrielcsilvaa/Life-Goals/pull/1). A `main` não foi alterada. Não foi contratado serviço nem realizado deploy público. Não foram aplicadas as novas migrations ao banco pessoal.

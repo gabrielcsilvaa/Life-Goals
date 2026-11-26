@@ -29,20 +29,30 @@ jobs:
           USER: ${{ vars.BACKEND_SSH_USER }}
           BACKEND_ORIGIN: ${{ vars.BACKEND_ORIGIN }}
           GH_TOKEN: ${{ github.token }}
+          PROVIDER: ${{ vars.BACKEND_PROVIDER }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
         run: |
-          test -n "$HOST" && test -n "$USER" && test -n "$BACKEND_ORIGIN" || { echo 'Backend hosting is not configured. No deployment performed.'; exit 1; }
+          test -n "$BACKEND_ORIGIN"
+          if [ "$PROVIDER" = render ]; then
+            test -n "$RENDER_SERVICE_ID"
+          else
+            test -n "$HOST" && test -n "$USER" || { echo 'Backend hosting is not configured. No deployment performed.'; exit 1; }
+          fi
           test "$(git rev-parse HEAD)" = "$COMMIT"
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$COMMIT" || { echo 'Release superseded by a newer main commit.'; exit 1; }
           echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
       - name: Build versioned backend image
+        if: vars.BACKEND_PROVIDER != 'render'
         env: {COMMIT: '${{ github.event.workflow_run.head_sha }}'}
         run: docker build --tag "ghcr.io/${GITHUB_REPOSITORY,,}/backend:$COMMIT" .
       - name: Publish image
+        if: vars.BACKEND_PROVIDER != 'render'
         env: {GHCR_TOKEN: '${{ secrets.GITHUB_TOKEN }}', COMMIT: '${{ github.event.workflow_run.head_sha }}'}
         run: |
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push "ghcr.io/${GITHUB_REPOSITORY,,}/backend:$COMMIT"
       - name: Deploy backend with backup, migration gate and health validation
+        if: vars.BACKEND_PROVIDER != 'render'
         env:
           SSH_KEY: ${{ secrets.BACKEND_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.BACKEND_SSH_KNOWN_HOSTS }}
@@ -55,6 +65,51 @@ jobs:
           printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/deploy-key"
           printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known-hosts"
           ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/known-hosts" -i "$RUNNER_TEMP/deploy-key" "$USER@$HOST" bash -s -- "ghcr.io/${GITHUB_REPOSITORY,,}/backend:$COMMIT" "$COMMIT" < scripts/deploy_backend.sh
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        if: vars.BACKEND_PROVIDER == 'render'
+        with: {python-version: '3.12'}
+      - name: Prepare PostgreSQL backup and migration tools
+        if: vars.BACKEND_PROVIDER == 'render'
+        run: |
+          python -m pip install --require-hashes -r backend/requirements.lock
+          bash scripts/install_pg_tools.sh
+          mkdir -m 700 "$RUNNER_TEMP/db-backup"
+      - name: Create encrypted backup before hosted migrations
+        if: vars.BACKEND_PROVIDER == 'render'
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+          BACKUP_DIR: ${{ runner.temp }}/db-backup
+        run: |
+          export PATH="/usr/lib/postgresql/18/bin:$PATH"
+          python scripts/backup_database.py
+      - name: Retain encrypted recovery artifact
+        id: backup
+        if: vars.BACKEND_PROVIDER == 'render'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: encrypted-db-backup-${{ github.event.workflow_run.head_sha }}
+          path: ${{ runner.temp }}/db-backup/*.dump.age
+          if-no-files-found: error
+          retention-days: 14
+      - name: Apply reviewed additive hosted migrations
+        if: vars.BACKEND_PROVIDER == 'render' && steps.backup.outcome == 'success'
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          BACKUP_DIR: ${{ runner.temp }}/db-backup
+          BACKUP_RETAINED: '1'
+          APP_VERSION: ${{ github.event.workflow_run.head_sha }}
+          FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN }}
+          BACKEND_ORIGIN: ${{ vars.BACKEND_ORIGIN }}
+        run: python scripts/migrate_hosted.py
+      - name: Deploy the tested commit on Render Free
+        if: vars.BACKEND_PROVIDER == 'render'
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          RELEASE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+          BACKEND_ORIGIN: ${{ vars.BACKEND_ORIGIN }}
+        run: python scripts/deploy_render.py
       - name: Verify public backend release
         env: {BACKEND_ORIGIN: '${{ vars.BACKEND_ORIGIN }}', COMMIT: '${{ github.event.workflow_run.head_sha }}'}
         run: curl --fail --silent --max-time 30 "$BACKEND_ORIGIN/ready/" | python3 -c 'import json,sys; assert json.load(sys.stdin)["version"] == sys.argv[1]' "$COMMIT"
