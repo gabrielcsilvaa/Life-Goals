@@ -5,8 +5,9 @@ import secrets
 import socket
 import subprocess
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
+import certifi
 import psycopg
 from dotenv import dotenv_values, set_key, unset_key
 from psycopg import sql
@@ -77,6 +78,26 @@ def prepare_environment():
 
 def main():
     LOCAL.mkdir(exist_ok=True)
+    configured = dict(dotenv_values(ENV_FILE))
+    if configured.get("LIFEGOALS_DATABASE_MODE") == "hosted":
+        database_url = configured.get("DATABASE_URL", "")
+        remote = urlparse(database_url)
+        if (
+            remote.scheme not in {"postgres", "postgresql"}
+            or not remote.hostname
+            or remote.hostname in {"localhost", "127.0.0.1"}
+            or parse_qs(remote.query).get("sslmode") != ["verify-full"]
+        ):
+            raise RuntimeError(
+                "O modo hosted exige PostgreSQL remoto com TLS verify-full."
+            )
+        with psycopg.connect(database_url, sslrootcert=certifi.where()) as connection:
+            connection.execute("SET TRANSACTION READ ONLY")
+            connection.execute("SELECT 1")
+        print(
+            "PostgreSQL hospedado validado; banco local preservado, sem bootstrap ou migrations."
+        )
+        return
     values = prepare_environment()
     port = int(values["DB_PORT"])
     if not (DATA / "PG_VERSION").exists():

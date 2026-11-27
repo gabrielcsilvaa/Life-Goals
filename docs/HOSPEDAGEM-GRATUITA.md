@@ -54,6 +54,8 @@ TLS usa verify-full e autoridades confiáveis do certifi, sem ignorar certificad
 5. Revalidar a origem imediatamente antes de liberar escritas remotas. Se houve novos registros desde o dump, interromper o corte e repetir a transferência de forma controlada. Não manter local e remoto aceitando escritas divergentes.
 6. Validar login, CSRF, isolamento por usuário, persistência após reload, recuperação de conta, MCP e os saldos com a mesma data de corte. Não criar pagamentos para testar dados reais.
 
+Para manter o servidor local/MCP ligado ao mesmo banco após o corte, use `LIFEGOALS_DATABASE_MODE=hosted` e `DATABASE_URL` com `sslmode=verify-full` em seu ambiente privado. O inicializador valida a conexão em modo somente leitura e não remove a URL nem reinicializa o banco local. A cópia local anterior permanece como arquivo de recuperação, sem aceitar novas escritas do papel do aplicativo.
+
 Enquanto esses itens não estiverem concluídos e o release não tiver sido validado, o endereço do projeto real não deve ser anunciado como pronto para login.
 
 ## Acompanhamento e falhas
