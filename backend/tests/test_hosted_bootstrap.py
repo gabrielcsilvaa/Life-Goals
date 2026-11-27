@@ -13,7 +13,7 @@ spec.loader.exec_module(setup)
 
 def test_hosted_start_preserves_url_and_never_bootstraps_local_database(tmp_path):
     env_file = tmp_path / ".env"
-    content = "LIFEGOALS_DATABASE_MODE=hosted\nDATABASE_URL=postgresql://test:unused@db.example.com/app?sslmode=verify-full\n"
+    content = "LIFEGOALS_DATABASE_MODE=hosted\nDATABASE_URL=postgresql://test@db.example.com/app?sslmode=verify-full\n"
     env_file.write_text(content)
     connection = MagicMock()
     with (
