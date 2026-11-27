@@ -8,7 +8,7 @@ O frontend real usa um projeto Vercel separado da demonstração. Render executa
 - Projeto Vercel `life-goals-app` criado separadamente de `life-goals-demo`. Criar o projeto não significa publicar um aplicativo com login funcional.
 - Backup local criptografado e restauração em PostgreSQL temporário verificados antes de qualquer restauração no Neon. A chave desse backup está protegida pelo Windows; não substitui uma cópia de recuperação externa.
 - Brevo Free escolhido pelo usuário para e-mail via HTTPS. Confirmar telefone, remetente e chave restrita ao envio. Chaves não devem ser colocadas em chats, código, bundle ou logs.
-- A main continua exigindo **outro revisor**. O autor não pode aprovar o próprio PR; nenhuma automação deve contornar essa regra.
+- A main exige **PR e testes obrigatórios**, sem segundo revisor humano, conforme autorização do proprietário em 27/11/2026. Push direto, force push e exclusão continuam bloqueados; não desativar checks para publicar.
 
 ## Planos e limitações
 
