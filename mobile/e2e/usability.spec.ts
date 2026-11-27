@@ -199,7 +199,10 @@ test("live API: first use with personal account, real income, travel plan and ex
     .getByLabel("Servidor da API", { exact: true })
     .fill(process.env.LIFEGOALS_TEST_API!);
   await page.getByLabel("Seu nome", { exact: true }).fill("Pessoa nova");
-  await page.getByLabel("Usuário", { exact: true }).fill(username);
+  await page
+    .getByLabel("E-mail", { exact: true })
+    .fill(`${username}@example.com`);
+
   await page.getByLabel("Senha", { exact: true }).fill(password);
   await page
     .getByRole("button", { name: "Criar minha conta", exact: true })
@@ -208,18 +211,10 @@ test("live API: first use with personal account, real income, travel plan and ex
     page.getByText("Vamos configurar seu mês", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Adicionar minha conta", exact: true })
+    .getByRole("button", { name: "Informar meu saldo atual", exact: true })
     .click();
   await page.getByLabel("Nome", { exact: true }).fill("Conta própria");
   await page.getByLabel("Saldo inicial (R$)", { exact: true }).fill("500");
-  await page.getByRole("button", { name: "Salvar", exact: true }).click();
-  await page
-    .getByRole("button", {
-      name: "Criar minha primeira categoria",
-      exact: true,
-    })
-    .click();
-  await page.getByLabel("Nome", { exact: true }).fill("Geral");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await page
     .getByRole("button", {
@@ -233,9 +228,11 @@ test("live API: first use with personal account, real income, travel plan and ex
   await page
     .getByRole("button", { name: "Selecionar Categoria", exact: true })
     .click();
-  await page.getByRole("radio", { name: "Geral", exact: true }).click();
+  await page.getByRole("radio", { name: "Salário", exact: true }).click();
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(page.getByText("R$ 1.500,00", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("R$ 1.500,00", { exact: true }).first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Adicionar", exact: true }).click();
   await page
     .getByRole("button", { name: "Meta de viagem", exact: true })
@@ -263,7 +260,7 @@ test("live API: first use with personal account, real income, travel plan and ex
   await page
     .getByRole("button", { name: "Selecionar Categoria", exact: true })
     .click();
-  await page.getByRole("radio", { name: "Geral", exact: true }).click();
+  await page.getByRole("radio", { name: "Transporte", exact: true }).click();
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await page.getByRole("link", { name: "Visão geral", exact: true }).click();
   await expect(page.getByText("R$ 1.175,00", { exact: true })).toBeVisible();

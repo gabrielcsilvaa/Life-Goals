@@ -108,7 +108,7 @@ test("dashboard: responsive captures and assets", async ({ page }) => {
   await page.getByRole("button", { name: "Adicionar", exact: true }).click();
   await page.getByRole("button", { name: "Despesa", exact: true }).click();
   await expect(
-    page.getByText("Registrar lançamento", { exact: true }),
+    page.getByText("Registrar despesa", { exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Fechar formulário", exact: true })

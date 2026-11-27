@@ -85,7 +85,7 @@ test("changing an expected date never receives income; a mistaken receipt can be
     .click();
   await page.getByRole("radio", { name: "Salário", exact: true }).click();
   await page
-    .getByLabel("Previsão de recebimento (AAAA-MM-DD)", { exact: true })
+    .getByLabel("Previsão de recebimento", { exact: true })
     .fill("30/01/2027");
   await expect(
     page.getByRole("radio", { name: "Ainda vou receber", exact: true }),

@@ -24,7 +24,7 @@ test("salary repeats monthly without a mandatory description or payment wording"
     page.getByRole("checkbox", { name: "Repetir todo mês", exact: true }),
   ).toBeChecked();
   await expect(
-    page.getByLabel("Previsão de recebimento (AAAA-MM-DD)", { exact: true }),
+    page.getByLabel("Previsão de recebimento", { exact: true }),
   ).toHaveValue("07/01/2027");
   await expect(page.getByText(/5º dia útil ·/)).toBeVisible();
   await page.screenshot({ path: "../artifacts/salary-recurring-form.png" });

@@ -6,6 +6,8 @@
 
 Aplicativo de organização financeira pessoal com Expo, Django e integração opcional com IA via MCP.
 
+**PWA e produção:** implementação e CI em validação. Consulte o [guia de produção e CI/CD](docs/PRODUCAO.md) para arquitetura, autenticação, ambientes, backups, deploy e pendências. Nenhum serviço pago ou deploy de produção foi realizado.
+
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-58-000020?logo=expo&logoColor=white)
@@ -126,7 +128,8 @@ Consulte a [revisão de segurança e seus limites](docs/SEGURANCA.md). A verific
 | [Roadmap](docs/ROADMAP.md) | Próximas fases e limitações |
 | [Validação](docs/VALIDACAO.md) | Cenários e evidências anteriores |
 | [Segurança](docs/SEGURANCA.md) | Revisão anterior à publicação |
+| [Auditoria e melhorias](docs/AUDITORIA.md) | Bugs corrigidos, UX, testes e limites de validação |
 
 ## Estado do projeto
 
-Base funcional em desenvolvimento. A conta real começa vazia. Homologação em aparelhos, restauração de backup, concorrência PostgreSQL e preparação completa de produção ainda precisam ser validadas. Tarefas, notas e investimentos estão previstos para fases futuras.
+Base funcional em desenvolvimento. A conta real começa vazia. Homologação em aparelhos, restauração de backup e preparação completa de produção ainda precisam ser validadas. A concorrência foi exercitada em PostgreSQL isolado; veja o relatório de auditoria. Tarefas, notas e investimentos estão previstos para fases futuras.

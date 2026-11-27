@@ -210,9 +210,21 @@ export function initialDemo(): DemoState {
 }
 
 export function materializeDemo(state: DemoState, month: string): DemoState {
-  return demoCommand(state, "generate_recurring_expenses", {
-    month: `${month}-01`,
-  });
+  const first = state.recurring
+    .filter((r) => r.active && r.start_month.slice(0, 7) <= month)
+    .map((r) => r.start_month.slice(0, 7))
+    .sort()[0];
+  let result = state;
+  for (
+    let cursor = first;
+    cursor && cursor <= month;
+    cursor = shiftMonth(cursor, 1)
+  ) {
+    result = demoCommand(result, "generate_recurring_expenses", {
+      month: `${cursor}-01`,
+    });
+  }
+  return result;
 }
 
 export function demoSnapshot(state: DemoState, month: string): Snapshot {
@@ -328,6 +340,16 @@ export function demoSnapshot(state: DemoState, month: string): Snapshot {
     summary: {
       balance: decimal(balance),
       reserved: decimal(reserved),
+      projected_available: decimal(
+        balance -
+          reserved -
+          unpaid -
+          budgetRemaining -
+          goalRemaining +
+          live
+            .filter((e) => e.kind === "income")
+            .reduce((n, e) => n + Math.max(0, cents(e.amount) - paid(e.id)), 0),
+      ),
       available: decimal(
         balance - reserved - unpaid - budgetRemaining - goalRemaining,
       ),
@@ -592,6 +614,7 @@ export function demoCommand(
     const e = findEntry();
     if (
       cents(e.settled_amount) ||
+      e.card_id ||
       e.installment_number ||
       e.status === "canceled"
     )
@@ -817,10 +840,23 @@ export function demoCommand(
       });
     }
   } else if (operation === "register_opening_invoice") {
+    // A non-installment card entry is an opening balance, regardless of its month.
     if (
       state.entries.some(
         (e) =>
           e.card_id === str("card_id") &&
+          !e.installment_number &&
+          e.status !== "canceled",
+      )
+    )
+      throw new Error(
+        "Este cartão já possui saldo inicial, mesmo em outro mês ou já quitado. Corrija ou cancele o lançamento aberto existente.",
+      );
+    if (
+      state.entries.some(
+        (e) =>
+          e.card_id === str("card_id") &&
+          e.status !== "canceled" &&
           e.due_date.startsWith(str("due_date").slice(0, 7)),
       )
     )

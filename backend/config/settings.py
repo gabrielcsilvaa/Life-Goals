@@ -28,6 +28,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "identity.middleware.PrivateResponsesMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -40,6 +41,24 @@ ROOT_URLCONF = "config.urls"
 ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {"default": database_config()}
 AUTH_USER_MODEL = "identity.User"
+AUTHENTICATION_BACKENDS = ["identity.authentication.EmailOrUsernameBackend"]
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:8081").rstrip("/")
+REQUIRE_EMAIL_VERIFICATION = os.getenv("REQUIRE_EMAIL_VERIFICATION", "false").lower() == "true"
+AUTH_ATTEMPTS_PER_WINDOW = 20
+PASSWORD_RESET_TIMEOUT = 3600
+SESSION_COOKIE_AGE = 7 * 86400
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://localhost:8081,http://127.0.0.1:8081,http://localhost:8082,http://127.0.0.1:8082",
+).split(",")
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.locmem.EmailBackend")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@lifegoals.invalid")
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -57,7 +76,10 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:8081,
 )
 CORS_ALLOW_HEADERS = [*default_headers, "idempotency-key"]
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     "PAGE_SIZE": 50,
@@ -69,6 +91,7 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "finance.errors.exception_handler",
 }
 SIMPLE_JWT = {
+    "CHECK_REVOKE_TOKEN": True,
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,

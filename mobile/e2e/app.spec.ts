@@ -24,9 +24,7 @@ test("mobile: expense creation, persistence, editing, cancellation and goals", a
     .click();
   await page.getByRole("radio", { name: "Alimentação", exact: true }).click();
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(
-    page.getByText("Salvo nesta demonstração.", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(/Despesa salva para/)).toBeVisible();
   await page.getByRole("link", { name: "Lançamentos", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Buscar lançamentos" })
@@ -41,14 +39,25 @@ test("mobile: expense creation, persistence, editing, cancellation and goals", a
   await page
     .getByRole("button", { name: "Detalhes: Almoço de teste", exact: true })
     .click();
-  await page.getByRole("button", { name: "Editar", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Editar despesa: Almoço de teste",
+      exact: true,
+    })
+    .click();
   await page.getByLabel("Valor (R$)", { exact: true }).fill("26,10");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.getByText("-R$ 26,10", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await page
-    .getByRole("button", { name: "Confirmar cancelamento", exact: true })
+    .getByRole("button", {
+      name: "Excluir despesa: Almoço de teste",
+      exact: true,
+    })
     .click();
+  await page
+    .getByRole("button", { name: "Confirmar exclusão", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Excluídos", exact: true }).click();
   await expect(page.getByText("Cancelado", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Minhas metas", exact: true }).click();
   await expect(
@@ -101,7 +110,9 @@ test("live API: login, persist expense, consult summary and disconnect", async (
   await page
     .getByLabel("Servidor da API", { exact: true })
     .fill(process.env.LIFEGOALS_TEST_API!);
-  await page.getByLabel("Usuário", { exact: true }).fill("browser-test");
+  await page
+    .getByLabel("E-mail ou usuário", { exact: true })
+    .fill("browser-test");
   await page.getByLabel("Senha", { exact: true }).fill("Browser-test-only-94!");
   await page
     .getByRole("button", { name: "Entrar na minha conta", exact: true })
@@ -113,9 +124,7 @@ test("live API: login, persist expense, consult summary and disconnect", async (
   await page
     .getByRole("button", { name: "Contas e saldo inicial", exact: true })
     .click();
-  await expect(
-    page.getByText("Conta conectada", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Conta pessoal", { exact: true })).toBeVisible();
   await expect(page.getByText("Conta E2E", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Lançamentos", exact: true }).click();
   await page.getByRole("button", { name: "Adicionar", exact: true }).click();
@@ -131,16 +140,16 @@ test("live API: login, persist expense, consult summary and disconnect", async (
   const date = new Date();
   const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   await page.getByRole("radio", { name: "Já paguei", exact: true }).click();
-  await page
-    .getByLabel("Realizado em (AAAA-MM-DD)", { exact: true })
-    .fill(today);
+  await page.getByLabel("Realizado em", { exact: true }).fill(today);
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.getByText(/Despesa salva para/)).toBeVisible();
   await expect(
     page.getByText("Despesa real da integração", { exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Visão geral", exact: true }).click();
-  await expect(page.getByText("R$ 1.968,00", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("R$ 1.968,00", { exact: true }).first(),
+  ).toBeVisible();
   // Exercise both failing user paths against Django, not the demonstration.
   await page.getByRole("button", { name: "Adicionar", exact: true }).click();
   await page.getByRole("button", { name: "Despesa", exact: true }).click();
@@ -167,6 +176,10 @@ test("live API: login, persist expense, consult summary and disconnect", async (
     page.getByText("Adicionar lançamento fixo", { exact: true }),
   ).toHaveCount(0);
   await page.getByRole("link", { name: "Lançamentos", exact: true }).click();
+  await expect(
+    page.getByText("Despesa fixa real", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
   await expect(
     page.getByText("Despesa fixa real", { exact: true }),
   ).toBeVisible();

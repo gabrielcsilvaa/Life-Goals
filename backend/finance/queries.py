@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
@@ -24,7 +25,10 @@ def parse_month(raw):
         raise DomainError("Mês inválido. Utilize AAAA-MM.") from None
 
 
+@transaction.atomic
 def snapshot(user, month):
+    # Keep the owner lock acquired by ensure_recurring_month through every total.
+    # REST and MCP writes use the same lock, so a summary cannot mix two states.
     from .services import ensure_recurring_month
 
     ensure_recurring_month(user, month)
@@ -175,6 +179,9 @@ def snapshot(user, month):
             "name": user.display_name or user.username,
             "username": user.username,
             "timezone": user.timezone,
+            "email": user.email,
+            "email_verified": user.email_verified_at is not None,
+            "preferences": user.preferences,
         },
         "month": start.strftime("%Y-%m"),
         "as_of": as_of.isoformat(),
@@ -189,6 +196,14 @@ def snapshot(user, month):
             "budget_remaining": amount_string(budget_remaining),
             "goal_plan_remaining": amount_string(goal_plan_remaining),
             "available": amount_string(balance - reserved - unpaid - budget_remaining - goal_plan_remaining),
+            "projected_available": amount_string(
+                balance
+                - reserved
+                - unpaid
+                - budget_remaining
+                - goal_plan_remaining
+                + max(income_expected - income_received, ZERO)
+            ),
         },
         "accounts": account_data,
         "categories": [

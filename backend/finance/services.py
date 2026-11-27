@@ -319,7 +319,7 @@ def update_entry(user, data):
 
     check_version(obj, data.version)
 
-    if obj.canceled or obj.settled_amount or obj.purchase_id:
+    if obj.canceled or obj.settled_amount or obj.purchase_id or obj.card_id:
         raise DomainError("Edite apenas lançamentos abertos sem liquidações e sem compra parcelada.")
 
     obj.category = category(user, data.category_id, obj.kind)
@@ -535,11 +535,19 @@ def opening_invoice(user, data):
 
     cat = category(user, data.category_id)
 
+    # Card entries without a purchase are imported opening balances, not installments.
+    # execute() serializes commands per user, including retries with different keys.
+    if Entry.objects.filter(user=user, card=card, purchase__isnull=True, canceled=False).exists():
+        raise DomainError(
+            "Este cartão já possui saldo inicial, mesmo em outro mês ou já quitado. "
+            "Corrija ou cancele o lançamento aberto existente antes de cadastrá-lo novamente."
+        )
+
     invoice, _ = CardInvoice.objects.get_or_create(
         user=user, card=card, month=data.due_date.replace(day=1), defaults={"due_date": data.due_date}
     )
 
-    if invoice.due_date != data.due_date or Entry.objects.filter(invoice=invoice).exists():
+    if invoice.due_date != data.due_date or Entry.objects.filter(invoice=invoice, canceled=False).exists():
         raise DomainError(
             "O saldo inicial deve ser informado em uma fatura vazia, com seu vencimento correto."
         )
@@ -839,9 +847,8 @@ def delete_goal(user, data):
 
 @transaction.atomic
 def ensure_recurring_month(user, month):
-    """Catch up elapsed months and the displayed month; forecasts never move cash."""
+    """Materialize commitments through the selected month, without moving cash."""
     User.objects.select_for_update().get(pk=user.pk)
-    today = timezone.now().astimezone(ZoneInfo(user.timezone)).date().replace(day=1)
     first = (
         RecurringRule.objects.filter(user=user, active=True, start_month__lte=month)
         .order_by("start_month")
@@ -850,12 +857,10 @@ def ensure_recurring_month(user, month):
     count = 0
     if first:
         cursor = first.start_month
-        through = min(month, today)
+        through = month
         while cursor <= through:
             count += generate_recurring(user, schemas.GenerateInput(month=cursor))["created"]
             cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
-        if month > today:
-            count += generate_recurring(user, schemas.GenerateInput(month=month))["created"]
     if count:
         AuditEvent.objects.create(
             user=user,

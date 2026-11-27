@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F7F0E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -22,7 +22,7 @@
       "package": "app.lifegoals.mobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./public/icons/icon-192.png",
       "name": "Life Goals",
       "description": "Seu dinheiro, seus planos. Um espaço para o que importa.",
       "output": "single"

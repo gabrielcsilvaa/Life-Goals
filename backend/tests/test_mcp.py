@@ -14,6 +14,12 @@ def mcp_client():
 
     with TestClient(application) as client:
         yield client
+        # MCP uses a database connection in the thread-sensitive async worker.
+        # Close it in that same worker before PostgreSQL test database teardown.
+        from asgiref.sync import sync_to_async
+        from django.db import connections
+
+        client.portal.call(sync_to_async(connections.close_all))
 
 
 @pytest.fixture
@@ -159,3 +165,74 @@ def test_oauth_access_token_calls_real_mcp_tools_and_enforces_read_scope(user, a
     )
     assert denied.json()["result"]["isError"]
     assert not Entry.objects.filter(user=user).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mcp_monthly_queries_preserve_paid_invoice_and_exclude_canceled_duplicate(
+    user, account, category, token, mcp_client
+):
+    from uuid import uuid4
+
+    from finance.models import Card, CardInvoice, CashMovement
+    from finance.services import execute
+
+    card = Card.objects.create(user=user, name="Test card", closing_day=5, due_day=12, blocked=True)
+    invoice = CardInvoice.objects.create(user=user, card=card, month="2026-11-01", due_date="2026-11-12")
+    paid = Entry.objects.create(
+        user=user,
+        card=card,
+        invoice=invoice,
+        category=category,
+        kind="expense",
+        amount="660.00",
+        due_date="2026-11-12",
+        description="Opening balance",
+    )
+    execute(
+        user,
+        "pay_card_invoice",
+        {
+            "card_id": str(card.pk),
+            "account_id": str(account.pk),
+            "month": "2026-11-01",
+            "amount": "660.00",
+            "paid_on": "2026-11-12",
+        },
+        str(uuid4()),
+    )
+    duplicate_invoice = CardInvoice.objects.create(
+        user=user, card=card, month="2026-12-01", due_date="2026-12-12"
+    )
+    duplicate = Entry.objects.create(
+        user=user,
+        card=card,
+        invoice=duplicate_invoice,
+        category=category,
+        kind="expense",
+        amount="660.00",
+        due_date="2026-12-12",
+        description="Opening balance",
+    )
+    execute(user, "cancel_transaction", {"entry_id": str(duplicate.pk), "version": 1}, str(uuid4()))
+    for month, total, status in [("2026-11", "660.00", "paid"), ("2026-12", "0.00", "canceled")]:
+        results = {}
+        for name in ["list_transactions", "list_card_invoices", "get_financial_summary"]:
+            response = rpc(
+                mcp_client,
+                token["token"],
+                "tools/call",
+                {
+                    "name": name,
+                    "arguments": {"month": month},
+                },
+            ).json()["result"]
+            assert not response.get("isError"), response
+            results[name] = response["structuredContent"]
+        assert results["list_transactions"]["items"][0]["status"] == status
+        assert results["list_card_invoices"]["cards"][0]["invoice_total"] == total
+        assert results["list_card_invoices"]["cards"][0]["invoice_paid"] == total
+        summary = results["get_financial_summary"]["summary"]
+        assert summary["unpaid"] == "0.00"
+        assert summary["balance"] == "1340.00"
+    assert CashMovement.objects.filter(entry=paid).count() == 1
+    assert not CashMovement.objects.filter(entry=duplicate).exists()

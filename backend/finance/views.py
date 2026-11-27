@@ -1,3 +1,6 @@
+from django.conf import settings
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from django.http import JsonResponse
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -9,7 +12,27 @@ from .services import COMMANDS, execute, serialize_entry
 
 
 def health(request):
-    return JsonResponse({"status": "ok", "database": "not_checked", "service": "life-goals"})
+    return JsonResponse(
+        {
+            "status": "ok",
+            "database": "not_checked",
+            "service": "life-goals",
+            "version": getattr(settings, "APP_VERSION", "development"),
+        }
+    )
+
+
+def ready(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        executor = MigrationExecutor(connection)
+        pending = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        if pending:
+            return JsonResponse({"status": "not_ready"}, status=503)
+    except Exception:
+        return JsonResponse({"status": "not_ready"}, status=503)
+    return JsonResponse({"status": "ready", "version": getattr(settings, "APP_VERSION", "development")})
 
 
 class SnapshotView(APIView):

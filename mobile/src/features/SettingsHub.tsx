@@ -1,3 +1,4 @@
+import { demoOnly } from "../lib/api";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -32,7 +33,7 @@ export default function SettingsHub() {
           : go("accounts"),
     },
     {
-      title: "Despesas fixas",
+      title: "Lançamentos fixos",
       detail: "Academia, celular e outras contas recorrentes",
       icon: "repeat-outline" as const,
       action: () =>
@@ -77,7 +78,11 @@ export default function SettingsHub() {
       subtitle="Deixe o Life Goals com a sua rotina."
       showMonth={false}
     >
-      {mode === "demo" ? (
+      {demoOnly ? (
+        <Muted>
+          Preview isolado: apenas dados fictícios, sem acesso a contas reais.
+        </Muted>
+      ) : mode === "demo" ? (
         <View
           style={{
             gap: 13,

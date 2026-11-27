@@ -1,5 +1,5 @@
 import { categoryKind } from "../lib/categoryRules";
-import { Link, router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { dashboardTheme as theme } from "../design/dashboard";
 import SettingsHub from "./SettingsHub";
 import Planning from "./Planning";
@@ -28,14 +28,41 @@ import {
 } from "../components/ui";
 
 export default function Settings() {
-  const { section } = useLocalSearchParams<{ section?: string }>();
+  const { section, register } = useLocalSearchParams<{
+    section?: string;
+    register?: string;
+  }>();
+  const { mode } = useApp();
+  if (api.demoOnly && section)
+    return (
+      <Screen
+        title="Demonstração online"
+        subtitle="Preview com dados fictícios."
+        showMonth={false}
+        onBack={() => router.replace("/")}
+      >
+        <Muted>
+          Contas pessoais ficam desativadas neste ambiente. Nenhuma conexão ao
+          banco real é realizada.
+        </Muted>
+        <Button
+          title="Explorar o exemplo"
+          onPress={() => router.replace("/")}
+        />
+      </Screen>
+    );
   if (!section) return <SettingsHub />;
   if (section === "cards") return <Planning />;
-  return <SettingsDetail section={section} />;
+  return (
+    <SettingsDetail
+      key={`${mode}:${section}:${register || ""}`}
+      section={section}
+    />
+  );
 }
 function SettingsDetail({ section }: { section: string }) {
   const params = useLocalSearchParams<{ register?: string }>();
-  const { data, mode, signIn, signOut, openForm } = useApp();
+  const { data, mode, signIn, signOut, hidden, setHidden, openForm } = useApp();
   const [url, setUrl] = useState(api.serverUrl()),
     [username, setUsername] = useState(""),
     [password, setPassword] = useState(""),
@@ -51,12 +78,21 @@ function SettingsDetail({ section }: { section: string }) {
   const [token, setToken] = useState(""),
     [revoke, setRevoke] = useState<Connection | null>(null);
   useEffect(() => {
-    if (mode === "live")
-      api
+    let current = true;
+    if (mode !== "live") return;
+    if (section === "mcp")
+      void api
         .getConnections()
-        .then(setConnections)
-        .catch((e) => setError(e.message));
-  }, [mode]);
+        .then((items) => {
+          if (current) setConnections(items);
+        })
+        .catch((e) => {
+          if (current) setError(e.message);
+        });
+    return () => {
+      current = false;
+    };
+  }, [mode, section]);
   async function auth() {
     if (busy) return;
     setBusy(true);
@@ -117,36 +153,34 @@ function SettingsDetail({ section }: { section: string }) {
               ? "Conexões com IA"
               : "Minha conta"
       }
-      subtitle="Suas contas, preferências e conexões."
+      subtitle={
+        section === "account"
+          ? "Seu perfil e suas preferências."
+          : "Suas contas, preferências e conexões."
+      }
+      onBack={() =>
+        router.canGoBack() ? router.back() : router.replace("/settings")
+      }
       showMonth={false}
     >
-      <Link
-        href="/settings"
-        accessibilityLabel="Voltar às configurações"
-        style={{
-          color: colors.teal,
-          paddingVertical: 12,
-          fontFamily: theme.font.medium,
-        }}
-      >
-        Voltar às configurações
-      </Link>
       {section === "account" && (
-        <Card>
+        <Card
+          style={mode === "live" ? { borderWidth: 0, padding: 0 } : undefined}
+        >
           <Heading
             title={
               mode === "demo"
                 ? register
                   ? "Criar minha conta"
                   : "Entrar na minha conta"
-                : `Olá, ${data?.user.name}`
+                : data?.user.name || "Seu perfil"
             }
             detail={
               mode === "demo"
                 ? register
                   ? "Sua conta começa vazia, sem importar o exemplo de 2027."
                   : "Acesse seus registros pessoais."
-                : "Você está usando o backend configurado."
+                : `@${data?.user.username || ""} · Conta pessoal`
             }
           />
           {mode === "demo" ? (
@@ -171,14 +205,18 @@ function SettingsDetail({ section }: { section: string }) {
                 </Text>
               </Pressable>
               {[
-                ...(advanced ? [["Servidor da API", url, setUrl]] : []),
+                ...(__DEV__ && advanced
+                  ? [["Servidor da API", url, setUrl]]
+                  : []),
                 ...(register
                   ? [
                       ["Seu nome", name, setName],
                       ["E-mail", email, setEmail],
                     ]
                   : []),
-                ["Usuário", username, setUsername],
+                ...(!register
+                  ? [["E-mail ou usuário", username, setUsername]]
+                  : []),
                 ["Senha", password, setPassword],
               ].map(([label, value, setter]) => (
                 <View key={String(label)} style={{ gap: 7 }}>
@@ -192,7 +230,7 @@ function SettingsDetail({ section }: { section: string }) {
                     keyboardType={
                       label === "E-mail" ? "email-address" : "default"
                     }
-                    autoCorrect={label === "E-mail" ? false : undefined}
+                    autoCorrect={false}
                     secureTextEntry={label === "Senha"}
                     autoComplete={
                       label === "Senha"
@@ -226,7 +264,7 @@ function SettingsDetail({ section }: { section: string }) {
                   }
                   disabled={
                     busy ||
-                    !username.trim() ||
+                    (!register && !username.trim()) ||
                     !password ||
                     (register && (!name.trim() || !email.trim()))
                   }
@@ -244,17 +282,120 @@ function SettingsDetail({ section }: { section: string }) {
                   </Text>
                 </Pressable>
               </View>
+              <Button
+                title="Esqueci minha senha"
+                secondary
+                onPress={() => router.push("/recover-account")}
+              />
             </View>
           ) : (
             <>
-              <Muted>{api.serverUrl()}</Muted>
+              <View style={{ gap: 16 }}>
+                <Text selectable style={styles.label}>
+                  {data?.user.email || "E-mail ainda não vinculado"}
+                </Text>
+                <Muted>
+                  {data?.user.email_verified
+                    ? "E-mail confirmado"
+                    : "Confirme seu e-mail para recuperar a conta com segurança."}
+                </Muted>
+                {!data?.user.email_verified && (
+                  <View style={{ gap: 10 }}>
+                    <Text style={styles.label}>
+                      Vincular ou confirmar e-mail
+                    </Text>
+                    <TextInput
+                      accessibilityLabel="E-mail para confirmação"
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      style={styles.input}
+                    />
+                    <TextInput
+                      accessibilityLabel="Senha atual para confirmar e-mail"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      style={styles.input}
+                    />
+                    <Button
+                      title="Enviar confirmação de e-mail"
+                      secondary
+                      disabled={!email.trim() || !password || busy}
+                      onPress={() => {
+                        setBusy(true);
+                        void api
+                          .bindEmail(email, password)
+                          .then((r) => {
+                            setError(r.message);
+                            setPassword("");
+                          })
+                          .catch((e) => setError(e.message))
+                          .finally(() => setBusy(false));
+                      }}
+                    />
+                  </View>
+                )}
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <Icon name="shield-checkmark-outline" color={colors.teal} />
+                  <Text style={styles.label}>Acesso individual</Text>
+                </View>
+                <Muted>Seus registros são salvos na sua conta pessoal.</Muted>
+                <Text style={styles.label}>Preferências</Text>
+                <Button
+                  title={
+                    hidden
+                      ? "Mostrar valores financeiros"
+                      : "Ocultar valores financeiros"
+                  }
+                  secondary
+                  onPress={() => setHidden(!hidden)}
+                />
+                <Muted>
+                  Fuso horário: {data?.user.timezone || "America/Sao_Paulo"}
+                </Muted>
+                <Button
+                  title="Gerenciar conexões com IA"
+                  secondary
+                  onPress={() =>
+                    router.push({
+                      pathname: "/settings",
+                      params: { section: "mcp" },
+                    })
+                  }
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: advanced }}
+                  onPress={() => setAdvanced(!advanced)}
+                  style={{ minHeight: 44, justifyContent: "center" }}
+                >
+                  <Text style={styles.label}>
+                    Configuração avançada {advanced ? "−" : "+"}
+                  </Text>
+                </Pressable>
+                {advanced && (
+                  <View style={{ gap: 8 }}>
+                    <Muted>Servidor de dados</Muted>
+                    <Text selectable style={styles.label}>
+                      {api.serverUrl()}
+                    </Text>
+                    <Muted>
+                      Altere a conexão somente ao entrar em uma conta.
+                    </Muted>
+                  </View>
+                )}
+              </View>
               <Button
                 title="Sair da conta"
                 secondary
                 onPress={() => {
                   void signOut().catch(() =>
                     setError(
-                      "Sessão local encerrada. Não foi possível confirmar a revogação no servidor.",
+                      "Não foi possível confirmar a saída. Verifique a conexão e tente novamente.",
                     ),
                   );
                 }}
@@ -420,9 +561,8 @@ function SettingsDetail({ section }: { section: string }) {
                 Nenhuma IA conectada
               </Text>
               <Muted>
-                Entre na conta real para criar e revogar conexões. Tokens
-                pessoais estão disponíveis nesta versão; conexão OAuth será
-                adicionada em outra etapa.
+                Entre na conta real para criar e revogar conexões. Você pode
+                autorizar um cliente de IA por OAuth ou criar um token pessoal.
               </Muted>
             </View>
           ) : (

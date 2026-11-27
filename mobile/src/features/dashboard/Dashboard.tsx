@@ -13,7 +13,7 @@ import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { dashboardTheme as theme } from "../../design/dashboard";
-import { cents, monthLabel, shortDate } from "../../lib/money";
+import { cents, decimal, monthLabel, shortDate } from "../../lib/money";
 import { useApp } from "../../state/AppProvider";
 import {
   Action,
@@ -164,10 +164,10 @@ export default function Dashboard() {
                   <View style={s.balanceBreakdown}>
                     <View style={s.balanceColumn}>
                       <Text style={s.balanceCaption}>
-                        receitas{"\n"}previstas
+                        saldo{"\n"}registrado
                       </Text>
                       <Cash
-                        value={summary.income_expected}
+                        value={summary.balance}
                         style={[
                           s.balanceAmount,
                           width < 360 && { fontSize: 12 },
@@ -177,10 +177,10 @@ export default function Dashboard() {
                     <View style={s.balanceDivider} />
                     <View style={s.balanceColumn}>
                       <Text style={s.balanceCaption}>
-                        despesas{"\n"}previstas
+                        compromissos{"\n"}em aberto
                       </Text>
                       <Cash
-                        value={summary.expense_expected}
+                        value={summary.unpaid}
                         style={[
                           s.balanceAmount,
                           width < 360 && { fontSize: 12 },
@@ -193,8 +193,8 @@ export default function Dashboard() {
               {cents(summary.available) < 0 && (
                 <Text style={s.explanation}>
                   {waitingIncome
-                    ? "Renda prevista; recebimento ainda não registrado."
-                    : "Seus compromissos superam o saldo registrado. Toque no saldo para conferir."}
+                    ? "Faltam recursos para cobrir os compromissos. Receitas previstas ainda não entraram no saldo."
+                    : "Os compromissos superam o valor livre. Isso não significa que sua conta bancária esteja negativa."}
                 </Text>
               )}
               <View style={s.section}>
@@ -317,9 +317,14 @@ export default function Dashboard() {
         )}
         {panel === "balance" && summary && (
           <Sheet title="seu disponível" close={() => setPanel(null)}>
-            <ScrollView contentContainerStyle={s.criteriaContent}>
+            <ScrollView
+              style={{ flexShrink: 1 }}
+              contentContainerStyle={s.criteriaContent}
+            >
               <Text style={s.body}>
-                O que você pode gastar, considerando o que já registrou.
+                Saldo registrado é o dinheiro informado nas contas. O disponível
+                desconta compromissos, reservas e planos; pode ser negativo
+                mesmo com saldo positivo.
               </Text>
               {[
                 ["Saldo em contas", summary.balance],
@@ -342,6 +347,23 @@ export default function Dashboard() {
                 </Text>
                 <Cash value={summary.available} />
               </View>
+              <View style={s.criterion}>
+                <Text style={s.criterionLabel}>Receitas ainda previstas</Text>
+                <Cash
+                  value={decimal(
+                    cents(summary.income_expected) -
+                      cents(summary.income_received),
+                  )}
+                />
+              </View>
+              {summary.projected_available !== undefined && (
+                <View style={s.criterion}>
+                  <Text style={s.criterionLabel}>
+                    Se receber o previsto do mês
+                  </Text>
+                  <Cash value={summary.projected_available} />
+                </View>
+              )}
               <Text style={s.explanation}>
                 Receitas previstas não são saldo recebido. Valores registrados
                 até {shortDate(data!.as_of)}.

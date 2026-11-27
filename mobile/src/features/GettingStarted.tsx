@@ -1,3 +1,4 @@
+import { demoOnly } from "../lib/api";
 import { acceptsCategory } from "../lib/categoryRules";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
@@ -54,15 +55,17 @@ export function GettingStarted() {
         <Muted>
           Configure sua conta para criar suas próprias despesas e metas.
         </Muted>
-        <Button
-          title="Configurar meu aplicativo"
-          onPress={() =>
-            router.push({
-              pathname: "/settings",
-              params: { section: "account", register: "1" },
-            })
-          }
-        />
+        {!demoOnly && (
+          <Button
+            title="Configurar meu aplicativo"
+            onPress={() =>
+              router.push({
+                pathname: "/settings",
+                params: { section: "account", register: "1" },
+              })
+            }
+          />
+        )}
       </View>
     );
   if (!empty) return null;
@@ -74,7 +77,7 @@ export function GettingStarted() {
       action: () => openForm("create_account", { name: "Conta principal" }),
     },
     {
-      title: "Adicionar Categorias a mais de despesas'",
+      title: "Categorias para receitas e despesas",
       detail:
         "Transporte, alimentação e outras. Você pode criar categorias específicas em Ajustes.",
       done: !!data?.categories.length,

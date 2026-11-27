@@ -225,12 +225,14 @@ export function Screen({
   children,
   action,
   showMonth = true,
+  onBack,
 }: {
   title: string;
   subtitle: string;
   children: React.ReactNode;
   action?: React.ReactNode;
   showMonth?: boolean;
+  onBack?: () => void;
 }) {
   const { mode, error, notice, loading, data, reload, hidden, setHidden } =
     useApp();
@@ -239,16 +241,38 @@ export function Screen({
     <ScrollView
       contentContainerStyle={[
         s.screen,
-        { paddingTop: Math.max(insets.top + 20, 38) },
+        { paddingTop: Math.max(insets.top + 16, onBack ? 24 : 38) },
       ]}
       keyboardShouldPersistTaps="handled"
     >
+      {onBack && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voltar às configurações"
+          onPress={onBack}
+          style={{
+            minHeight: 44,
+            alignSelf: "flex-start",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Icon name="chevron-back" color={colors.ink} />
+          <Text style={{ color: colors.ink, fontFamily: theme.font.medium }}>
+            Ajustes
+          </Text>
+        </Pressable>
+      )}
       <View style={s.pageHeading}>
         <View style={{ gap: 8, flex: 1 }}>
-          <Text accessibilityRole="header" style={s.pageTitle}>
+          <Text
+            accessibilityRole="header"
+            style={[s.pageTitle, onBack && { fontSize: 28 }]}
+          >
             {title}
           </Text>
-          <Muted>{subtitle}</Muted>
+          {!!subtitle && <Muted>{subtitle}</Muted>}
         </View>
         {action}
       </View>
@@ -270,7 +294,7 @@ export function Screen({
       )}
       {!data ? (
         <View style={{ padding: 40, gap: 15 }}>
-          <ActivityIndicator color={colors.teal} />
+          {loading && <ActivityIndicator color={colors.teal} />}
           <Muted>
             {loading
               ? "Organizando seus dados…"
@@ -282,23 +306,41 @@ export function Screen({
       )}
       <View style={s.footer}>
         <Text style={s.footnote}>
-          {mode === "demo" ? "Demonstração" : "Conta conectada"}
+          {mode === "demo" ? "Demonstração" : "Conta pessoal"}
         </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={hidden ? "Mostrar valores" : "Ocultar valores"}
           onPress={() => setHidden(!hidden)}
-          style={s.monthArrow}
+          style={[
+            s.monthArrow,
+            {
+              width: "auto",
+              paddingHorizontal: 6,
+              gap: 5,
+              flexDirection: "row",
+            },
+          ]}
         >
           <Icon name={hidden ? "eye-off-outline" : "eye-outline"} size={19} />
+          <Text style={s.footnote}>{hidden ? "Mostrar" : "Ocultar"}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Atualizar dados"
           onPress={() => void reload()}
-          style={s.monthArrow}
+          style={[
+            s.monthArrow,
+            {
+              width: "auto",
+              paddingHorizontal: 6,
+              gap: 5,
+              flexDirection: "row",
+            },
+          ]}
         >
           <Icon name="refresh-outline" size={19} />
+          <Text style={s.footnote}>Atualizar</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -311,7 +353,7 @@ export const s = StyleSheet.create({
     maxWidth: 480,
     width: "100%",
     alignSelf: "center",
-    paddingBottom: 110,
+    paddingBottom: 28,
   },
   card: {
     backgroundColor: colors.card,

@@ -27,7 +27,7 @@ test("creating a future fixed expense does not hide current income, duplicate, o
     await page.getByRole("radio", { name: "Transporte", exact: true }).click();
     await page.getByLabel("Dia de vencimento", { exact: true }).fill("1");
     await page
-      .getByLabel("Primeiro mês (AAAA-MM-01)", { exact: true })
+      .getByLabel("Primeiro mês", { exact: true })
       .fill("01/02/2027");
     await page.getByRole("button", { name: "Salvar", exact: true }).click();
   }
