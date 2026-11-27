@@ -152,5 +152,5 @@ jobs:
             | node -e 'let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{const p=JSON.parse(s); if(p.id!==process.env.VERCEL_PROJECT_ID || p.accountId!==process.env.VERCEL_ORG_ID) process.exit(1); console.log("Configured production project verified.");});'
           URL=$(npx --yes vercel@67.0.0 deploy --prebuilt --prod --skip-domain --yes)
           npx --yes vercel@67.0.0 curl /version.json --deployment "$URL" -- --fail --silent | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["commit"] == sys.argv[1] and data["demoOnly"] is False' "$COMMIT"
-          npx --yes vercel@67.0.0 promote "$URL" --yes
+          DEPLOYMENT_URL="$URL" node scripts/promote_vercel.mjs
           curl --fail --silent --max-time 30 "$FRONTEND_ORIGIN/version.json" | python3 -c 'import json,sys; assert json.load(sys.stdin)["commit"] == sys.argv[1]' "$COMMIT"
