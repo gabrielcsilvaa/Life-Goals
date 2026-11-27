@@ -8,7 +8,7 @@ O frontend real usa um projeto Vercel separado da demonstração. Render executa
 - Projeto Vercel `life-goals-app` criado separadamente de `life-goals-demo`. Criar o projeto não significa publicar um aplicativo com login funcional.
 - Backup local criptografado e restauração em PostgreSQL temporário verificados antes de qualquer restauração no Neon. A chave desse backup está protegida pelo Windows; não substitui uma cópia de recuperação externa.
 - Brevo Free escolhido pelo usuário para e-mail via HTTPS. Confirmar telefone, remetente e chave restrita ao envio. Chaves não devem ser colocadas em chats, código, bundle ou logs.
-- A main continua exigindo **outro revisor**. O autor não pode aprovar o próprio PR; nenhuma automação deve contornar essa regra.
+- A main exige **PR e testes obrigatórios**, sem segundo revisor humano, conforme autorização do proprietário em 27/11/2026. Push direto, force push e exclusão continuam bloqueados; não desativar checks para publicar.
 
 ## Planos e limitações
 
@@ -53,6 +53,8 @@ TLS usa verify-full e autoridades confiáveis do certifi, sem ignorar certificad
 4. Configurar papel runtime, segredos, e-mail e autenticação. Credenciais e sessões importadas precisam de revisão; a cópia não deve expor acessos administrativos genéricos.
 5. Revalidar a origem imediatamente antes de liberar escritas remotas. Se houve novos registros desde o dump, interromper o corte e repetir a transferência de forma controlada. Não manter local e remoto aceitando escritas divergentes.
 6. Validar login, CSRF, isolamento por usuário, persistência após reload, recuperação de conta, MCP e os saldos com a mesma data de corte. Não criar pagamentos para testar dados reais.
+
+Para manter o servidor local/MCP ligado ao mesmo banco após o corte, use `LIFEGOALS_DATABASE_MODE=hosted` e `DATABASE_URL` com `sslmode=verify-full` em seu ambiente privado. O inicializador valida a conexão em modo somente leitura e não remove a URL nem reinicializa o banco local. A cópia local anterior permanece como arquivo de recuperação, sem aceitar novas escritas do papel do aplicativo.
 
 Enquanto esses itens não estiverem concluídos e o release não tiver sido validado, o endereço do projeto real não deve ser anunciado como pronto para login.
 
